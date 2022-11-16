@@ -88,7 +88,9 @@ CLRS_30_ALGS = [
     'mst_kruskal',
     'mst_prim',
     'naive_string_matcher',
+    'odd_even_transp_sort',
     'optimal_bst',
+    'parallel_search',
     'quickselect',
     'quicksort',
     'segments_intersect',
@@ -105,12 +107,18 @@ CLRS_30_ALGS_SETTINGS = {alg: {'num_samples_multiplier': 1}
                          for alg in CLRS_30_ALGS}
 CLRS_30_ALGS_SETTINGS['find_maximum_subarray_kadane'][
     'num_samples_multiplier'] = 32
-for alg in ['quickselect', 'minimum', 'binary_search', 'naive_string_matcher',
+for alg in ['quickselect', 'minimum', 'parallel_search', 'binary_search', 'naive_string_matcher',
             'kmp_matcher', 'segments_intersect']:
   CLRS_30_ALGS_SETTINGS[alg]['num_samples_multiplier'] = 64
 
 
 SPECS = types.MappingProxyType({
+    'odd_even_transp_sort': {
+        # 'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
+        'pairs':(Stage.HINT, Location().EDGE, Type.MASK), # spans allowed permutations -- mask edges to obtain matching
+        'swap':(Stage.HINT, Location().EDGE, Type.MASK),  # sym. permutation matrix 
+        'pred':(Stage.OUTPUT, Location.NODE, Type.POINTER)
+    },
     'insertion_sort': {
         'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
         'key': (Stage.INPUT, Location.NODE, Type.SCALAR),
@@ -168,6 +176,12 @@ SPECS = types.MappingProxyType({
         'pred_h': (Stage.HINT, Location.NODE, Type.POINTER),
         'min_h': (Stage.HINT, Location.NODE, Type.MASK_ONE),
         'i': (Stage.HINT, Location.NODE, Type.MASK_ONE)
+    },
+    'parallel_search': {
+        'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
+        'key': (Stage.INPUT, Location.NODE, Type.SCALAR),
+        'target': (Stage.INPUT, Location.GRAPH, Type.SCALAR),
+        'bin_ind': (Stage.HINT, Location.NODE, Type.MASK),
     },
     'binary_search': {
         'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
