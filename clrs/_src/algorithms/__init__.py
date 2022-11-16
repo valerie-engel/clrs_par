@@ -46,9 +46,11 @@ from clrs._src.algorithms.greedy import activity_selector
 from clrs._src.algorithms.greedy import task_scheduling
 
 from clrs._src.algorithms.searching import minimum
+from clrs._src.algorithms.searching import parallel_search
 from clrs._src.algorithms.searching import binary_search
 from clrs._src.algorithms.searching import quickselect
 
+from clrs._src.algorithms.sorting import odd_even_transp_sort
 from clrs._src.algorithms.sorting import insertion_sort
 from clrs._src.algorithms.sorting import bubble_sort
 from clrs._src.algorithms.sorting import heapsort
