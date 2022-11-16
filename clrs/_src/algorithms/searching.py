@@ -121,7 +121,7 @@ def parallel_search(x: _Numeric, A: _Array) -> _Out:
       
   probing.finalize(probes)
   
-  return i, B, probes
+  return i, probes
 
 def binary_search(x: _Numeric, A: _Array) -> _Out:
   """Binary search."""
