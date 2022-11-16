@@ -632,12 +632,14 @@ class ConvexHullSampler(Sampler):
 
 
 SAMPLERS = {
+    'odd_even_transp_sort': SortingSampler,
     'insertion_sort': SortingSampler,
     'bubble_sort': SortingSampler,
     'heapsort': SortingSampler,
     'quicksort': SortingSampler,
     'quickselect': SortingSampler,
     'minimum': SortingSampler,
+    'parallel_search': SearchSampler,
     'binary_search': SearchSampler,
     'find_maximum_subarray': MaxSubarraySampler,
     'find_maximum_subarray_kadane': MaxSubarraySampler,
