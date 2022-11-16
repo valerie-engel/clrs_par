@@ -87,6 +87,41 @@ def minimum(A: _Array) -> _Out:
 
   return min_, probes
 
+def parallel_search(x: _Numeric, A: _Array) -> _Out:
+  """Parallel search."""
+
+  chex.assert_rank(A, 1)
+  probes = probing.initialize(specs.SPECS['parallel_search'])
+
+  T_pos = np.arange(A.shape[0])
+
+  probing.push(
+      probes,
+      specs.Stage.INPUT,
+      next_probe={
+          'pos': np.copy(T_pos),
+          # 'pos': np.copy(T_pos) * 1.0 / A.shape[0],
+          'key': np.copy(A),
+          'target': x
+      })
+  
+  B = np.ones_like(A)
+  
+  i = 0
+  while i < len(A) and x > A[i]:
+      B[i] = 0
+      i = i + 1
+          
+  probing.push(
+      probes,
+      specs.Stage.HINT,
+      next_probe={
+          'bin_ind': np.copy(B)
+          })
+      
+  probing.finalize(probes)
+  
+  return i, B, probes
 
 def binary_search(x: _Numeric, A: _Array) -> _Out:
   """Binary search."""
