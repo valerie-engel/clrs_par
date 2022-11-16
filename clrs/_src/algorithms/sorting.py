@@ -39,6 +39,28 @@ _Array = np.ndarray
 _Out = Tuple[_Array, probing.ProbesDict]
 
 
+def odd_even_transp_sort(A: _Array) -> _Out:
+  """Odd even transposition sort."""
+
+  chex.assert_rank(A, 1)
+  probes = probing.initialize(specs.SPECS['odd_even_transp_sort'])
+  
+  # block diagonal matrix with 2x2 all one blocks along diag. 
+  num_pairs = int(np.ceil(A.shape[0]/2))
+  pairs = np.kron(np.eye(num_pairs,dtype=int), np.ones((2,2)))
+  if A.shape[0]%2:
+      np.delete(pairs, -1, axis = 0)
+      np.delete(pairs, -1, axis = 1)
+  
+  
+  probing.push()
+  
+  
+  probing.finalize(probes)
+
+  return A, probes
+  
+  
 def insertion_sort(A: _Array) -> _Out:
   """Insertion sort."""
 
