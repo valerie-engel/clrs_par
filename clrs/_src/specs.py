@@ -115,8 +115,9 @@ for alg in ['quickselect', 'minimum', 'parallel_search', 'binary_search', 'naive
 SPECS = types.MappingProxyType({
     'odd_even_transp_sort': {
         # 'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
-        'pairs':(Stage.HINT, Location().EDGE, Type.MASK), # spans allowed permutations -- mask edges to obtain matching
-        'swap':(Stage.HINT, Location().EDGE, Type.MASK),  # sym. permutation matrix 
+        # adj on input? 
+        'pairs':(Stage.HINT, Location.EDGE, Type.MASK), # spans allowed permutations -- mask edges to obtain matching
+        'swap':(Stage.HINT, Location.EDGE, Type.MASK),  # sym. permutation matrix 
         'pred':(Stage.OUTPUT, Location.NODE, Type.POINTER)
     },
     'insertion_sort': {
@@ -181,7 +182,9 @@ SPECS = types.MappingProxyType({
         'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
         'key': (Stage.INPUT, Location.NODE, Type.SCALAR),
         'target': (Stage.INPUT, Location.GRAPH, Type.SCALAR),
-        'bin_ind': (Stage.HINT, Location.NODE, Type.MASK),
+        # 'adj': (Stage.INPUT, Location.EDGE, Type.MASK),
+        'geq_target': (Stage.HINT, Location.NODE, Type.MASK),
+        'return': (Stage.OUTPUT, Location.GRAPH, Type.SCALAR)
     },
     'binary_search': {
         'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),

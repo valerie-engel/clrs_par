@@ -93,7 +93,10 @@ def parallel_search(x: _Numeric, A: _Array) -> _Out:
   chex.assert_rank(A, 1)
   probes = probing.initialize(specs.SPECS['parallel_search'])
 
-  T_pos = np.arange(A.shape[0])
+  T_pos = np.arange(A.shape[0]) # + 1
+  
+  # adj = np.zeros(A.shape[0], A.shape[0])
+  # DO I EVEN NEED ADJ OR DO I GET SAME RESULT WITH X AS GR.FT. AND ADJ_MAT INIT AS ALL ZEROS?
 
   probing.push(
       probes,
@@ -116,9 +119,14 @@ def parallel_search(x: _Numeric, A: _Array) -> _Out:
       probes,
       specs.Stage.HINT,
       next_probe={
-          'bin_ind': np.copy(B)
+          'geq_target': np.copy(B)
           })
-      
+  
+  probing.push(
+      probes,
+      specs.Stage.OUTPUT,
+      next_probe={'return': i}) #probing.mask_one(i, A.shape[0] + 1)
+    
   probing.finalize(probes)
   
   return i, probes
