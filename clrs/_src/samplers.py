@@ -306,6 +306,7 @@ class SearchSampler(Sampler):
     arr = self._random_sequence(length=length, low=low, high=high)
     arr.sort()
     x = self._rng.uniform(low=low, high=high)
+    # THIS WAY, X WILL (ALMOST) NEVER BE IN THE ARRAY?!
     return [x, arr]
 
 

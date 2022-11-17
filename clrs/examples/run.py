@@ -23,6 +23,12 @@ from typing import Any, Dict, List
 from absl import app
 from absl import flags
 from absl import logging
+
+# =============================================================================
+# wdir = os.path.dirname(os.path.dirname(os.getcwd()))
+# os.chdir(wdir)
+# =============================================================================
+
 import clrs
 import jax
 import jax.numpy as jnp
@@ -30,8 +36,7 @@ import numpy as np
 import requests
 import tensorflow as tf
 
-
-flags.DEFINE_list('algorithms', ['bfs'], 'Which algorithms to run.')
+flags.DEFINE_list('algorithms', ['binary_search'], 'Which algorithms to run.')
 flags.DEFINE_list('train_lengths', ['4', '7', '11', '13', '16'],
                   'Which training sizes to use. A size of -1 means '
                   'use the benchmark dataset.')
@@ -56,8 +61,8 @@ flags.DEFINE_boolean('chunked_training', False,
 flags.DEFINE_integer('chunk_length', 16,
                      'Time chunk length used for training (if '
                      '`chunked_training` is True.')
-flags.DEFINE_integer('train_steps', 30000, 'Number of training iterations.')
-flags.DEFINE_integer('eval_every', 500, 'Evaluation frequency (in steps).')
+flags.DEFINE_integer('train_steps', 1000, 'Number of training iterations.')
+flags.DEFINE_integer('eval_every', 100, 'Evaluation frequency (in steps).')
 
 flags.DEFINE_integer('hidden_size', 128,
                      'Number of hidden units of the model.')
@@ -108,7 +113,7 @@ flags.DEFINE_integer('nb_triplet_fts', 8,
 flags.DEFINE_enum('encoder_init', 'default',
                   ['default', 'xavier_on_scalars'],
                   'Initialiser to use for the encoders.')
-flags.DEFINE_enum('processor_type', 'triplet_mpnn',
+flags.DEFINE_enum('processor_type', 'mpnn',
                   ['deepsets', 'mpnn', 'pgn', 'pgn_mask',
                    'triplet_mpnn', 'triplet_pgn', 'triplet_pgn_mask',
                    'gat', 'gatv2', 'gat_full', 'gatv2_full',
