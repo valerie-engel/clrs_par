@@ -29,8 +29,8 @@ See "Introduction to Algorithms" 3ed (CLRS3) for more information.
 from typing import Tuple, Union
 
 import chex
-from clrs._src import probing
-from clrs._src import specs
+#from clrs._src import probing
+#from clrs._src import specs
 import numpy as np
 
 
@@ -92,11 +92,15 @@ def parallel_search(x: _Numeric, A: _Array) -> _Out:
 
   chex.assert_rank(A, 1)
   probes = probing.initialize(specs.SPECS['parallel_search'])
-
-  T_pos = np.arange(A.shape[0]) # + 1
   
-  # adj = np.zeros(A.shape[0], A.shape[0])
+  n = A.shape[0]
+  nodes = np.concatenate(([x], A))
+  T_pos = np.arange(n + 1)
+  
+  # create sym. adj. mat with all self edges and edges between x and all others
+  adj = np.concatenate((np.transpose([np.ones(n + 1)]) , np.concatenate(([np.ones(n)], np.eye(n,n)))), 1)
   # DO I EVEN NEED ADJ OR DO I GET SAME RESULT WITH X AS GR.FT. AND ADJ_MAT INIT AS ALL ZEROS?
+  # Well I need extra node anyway to reasonably encode new position of x as 1-hot
 
   probing.push(
       probes,
@@ -104,16 +108,30 @@ def parallel_search(x: _Numeric, A: _Array) -> _Out:
       next_probe={
           'pos': np.copy(T_pos),
           # 'pos': np.copy(T_pos) * 1.0 / A.shape[0],
-          'key': np.copy(A),
-          'target': x
+          'key': np.copy(nodes),
+          'target': x,
+          'adj': np.copy(adj)
       })
   
-  B = np.ones_like(A)
-  
+  # B[i] = 1 <-> x <= A[i] 
+  # by convention B[len(A)] = 1, such that lowest j at which B[j] = 1 is always desired pos. of x in A
+  # this way, x has to compute min of all incoming values -> change to max (by using 1 - B and appending y at bottom)?
+  # DO I GENERALLY RUN INTO TROUBLE BY HAVING X AS NODE BECAUSE OF ANTISYM. OF <?
+  B = np.ones_like(nodes)
   i = 0
   while i < len(A) and x > A[i]:
       B[i] = 0
       i = i + 1
+  
+# =============================================================================
+#   # B[i] = 1 <-> x >= A[i] 
+#   # by convention B[len(A)] = 1, such that lowest j at which B[j] = 1 is always desired pos. of x in A
+#   B = np.zeros_like(nodes)
+#   i = 0
+#   while i < len(A) and x >= A[i]:
+#      B[i] = 1
+#      i = i + 1
+# =============================================================================
           
   probing.push(
       probes,
@@ -125,7 +143,7 @@ def parallel_search(x: _Numeric, A: _Array) -> _Out:
   probing.push(
       probes,
       specs.Stage.OUTPUT,
-      next_probe={'return': i}) #probing.mask_one(i, A.shape[0] + 1)
+      next_probe={'return': probing.mask_one(i, n + 1)}) #i
     
   probing.finalize(probes)
   

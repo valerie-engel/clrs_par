@@ -372,6 +372,7 @@ class PGN(Processor):
     assert edge_fts.shape[:-1] == (b, n, n)
     assert graph_fts.shape[:-1] == (b,)
     assert adj_mat.shape == (b, n, n)
+    #print(adj_mat)
 
     z = jnp.concatenate([node_fts, hidden], axis=-1)
     m_1 = hk.Linear(self.mid_size)
@@ -450,7 +451,9 @@ class MPNN(PGN):
 
   def __call__(self, node_fts: _Array, edge_fts: _Array, graph_fts: _Array,
                adj_mat: _Array, hidden: _Array, **unused_kwargs) -> _Array:
-    adj_mat = jnp.ones_like(adj_mat)
+    # TO BE ABLE TO USE CUSTOM ADJ_MAT
+    # adj_mat = jnp.ones_like(adj_mat)
+    #print(adj_mat)
     return super().__call__(node_fts, edge_fts, graph_fts, adj_mat, hidden)
 
 

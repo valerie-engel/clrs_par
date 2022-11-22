@@ -24,10 +24,8 @@ from absl import app
 from absl import flags
 from absl import logging
 
-# =============================================================================
-# wdir = os.path.dirname(os.path.dirname(os.getcwd()))
-# os.chdir(wdir)
-# =============================================================================
+wdir = os.path.dirname(os.path.dirname(os.getcwd()))
+os.chdir(wdir)
 
 import clrs
 import jax
@@ -36,7 +34,7 @@ import numpy as np
 import requests
 import tensorflow as tf
 
-flags.DEFINE_list('algorithms', ['binary_search'], 'Which algorithms to run.')
+flags.DEFINE_list('algorithms', ['parallel_search'], 'Which algorithms to run.')
 flags.DEFINE_list('train_lengths', ['4', '7', '11', '13', '16'],
                   'Which training sizes to use. A size of -1 means '
                   'use the benchmark dataset.')

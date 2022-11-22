@@ -182,9 +182,10 @@ SPECS = types.MappingProxyType({
         'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
         'key': (Stage.INPUT, Location.NODE, Type.SCALAR),
         'target': (Stage.INPUT, Location.GRAPH, Type.SCALAR),
-        # 'adj': (Stage.INPUT, Location.EDGE, Type.MASK),
+        'adj': (Stage.INPUT, Location.EDGE, Type.MASK),
         'geq_target': (Stage.HINT, Location.NODE, Type.MASK),
-        'return': (Stage.OUTPUT, Location.GRAPH, Type.SCALAR)
+        # 'return': (Stage.OUTPUT, Location.GRAPH, Type.SCALAR)
+        'return': (Stage.OUTPUT, Location.NODE, Type.MASK_ONE)
     },
     'binary_search': {
         'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
