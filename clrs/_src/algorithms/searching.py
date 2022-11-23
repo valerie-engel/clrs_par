@@ -29,8 +29,8 @@ See "Introduction to Algorithms" 3ed (CLRS3) for more information.
 from typing import Tuple, Union
 
 import chex
-#from clrs._src import probing
-#from clrs._src import specs
+from clrs._src import probing
+from clrs._src import specs
 import numpy as np
 
 
@@ -87,6 +87,35 @@ def minimum(A: _Array) -> _Out:
 
   return min_, probes
 
+def parallel_find(x: _Numeric, A: _Array) -> _Out:
+  """Parallel find."""
+
+  chex.assert_rank(A, 1)
+  probes = probing.initialize(specs.SPECS['parallel_find'])
+  
+  n = A.shape[0]
+  T_pos = np.arange(n)
+  probing.push(
+      probes,
+      specs.Stage.INPUT,
+      next_probe={
+          'pos': np.copy(T_pos),
+          # 'pos': np.copy(T_pos) * 1.0 / A.shape[0],
+          'key': np.copy(A),
+          'target': x,
+      })
+  
+  i = np.where(A == x)[0][0]
+  
+  probing.push(
+      probes,
+      specs.Stage.OUTPUT,
+      next_probe={'return': probing.mask_one(i, n)})
+    
+  probing.finalize(probes)
+  
+  return i, probes
+
 def parallel_search(x: _Numeric, A: _Array) -> _Out:
   """Parallel search."""
 
@@ -94,13 +123,21 @@ def parallel_search(x: _Numeric, A: _Array) -> _Out:
   probes = probing.initialize(specs.SPECS['parallel_search'])
   
   n = A.shape[0]
-  nodes = np.concatenate(([x], A))
-  T_pos = np.arange(n + 1)
+  # nodes = np.concatenate(([x], A))
+  T_pos = np.arange(n) # n + 1
   
   # create sym. adj. mat with all self edges and edges between x and all others
-  adj = np.concatenate((np.transpose([np.ones(n + 1)]) , np.concatenate(([np.ones(n)], np.eye(n,n)))), 1)
+  # adj = np.concatenate((np.transpose([np.ones(n + 1)]) , np.concatenate(([np.ones(n)], np.eye(n,n)))), 1)
+# =============================================================================
+#   adj_path = np.eye(n) + np.diagflat(np.ones(n - 1), 1) + np.diagflat(np.ones(n - 1), -1)
+#   # path on A, connect x to each node of A
+#   adj = np.concatenate((np.transpose([np.ones(n + 1)]) , np.concatenate(([np.ones(n)], adj_path))), 1)
+# =============================================================================
+  
   # DO I EVEN NEED ADJ OR DO I GET SAME RESULT WITH X AS GR.FT. AND ADJ_MAT INIT AS ALL ZEROS?
   # Well I need extra node anyway to reasonably encode new position of x as 1-hot
+  
+  #hint at x - A or sth.?!
 
   probing.push(
       probes,
@@ -108,16 +145,17 @@ def parallel_search(x: _Numeric, A: _Array) -> _Out:
       next_probe={
           'pos': np.copy(T_pos),
           # 'pos': np.copy(T_pos) * 1.0 / A.shape[0],
-          'key': np.copy(nodes),
+          'key': np.copy(A), #
           'target': x,
-          'adj': np.copy(adj)
+          # 'adj': np.copy(adj)
       })
   
   # B[i] = 1 <-> x <= A[i] 
   # by convention B[len(A)] = 1, such that lowest j at which B[j] = 1 is always desired pos. of x in A
   # this way, x has to compute min of all incoming values -> change to max (by using 1 - B and appending y at bottom)?
   # DO I GENERALLY RUN INTO TROUBLE BY HAVING X AS NODE BECAUSE OF ANTISYM. OF <?
-  B = np.ones_like(nodes)
+  # B = np.ones_like(nodes)
+  B = np.ones_like(A)
   i = 0
   while i < len(A) and x > A[i]:
       B[i] = 0
@@ -143,7 +181,7 @@ def parallel_search(x: _Numeric, A: _Array) -> _Out:
   probing.push(
       probes,
       specs.Stage.OUTPUT,
-      next_probe={'return': probing.mask_one(i, n + 1)}) #i
+      next_probe={'return': np.array(i)}) #probing.mask_one(i, n + 1)
     
   probing.finalize(probes)
   

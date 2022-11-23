@@ -310,6 +310,22 @@ class SearchSampler(Sampler):
     return [x, arr]
 
 
+class FindSampler(Sampler):
+  """Find sampler. Generates a random sequence (of U[0, 1]) and chooses target from that sequence."""
+
+  def _sample_data(
+      self,
+      length: int,
+      low: float = 0.,
+      high: float = 1.,
+  ):
+    arr = self._random_sequence(length=length, low=low, high=high)
+    arr.sort()
+    x = self._rng.choice(arr)
+    # make sure x is in arr
+    return [x, arr]
+
+
 class MaxSubarraySampler(Sampler):
   """Maximum subarray sampler. Generates a random sequence of U[-1, 1]."""
 
@@ -640,6 +656,7 @@ SAMPLERS = {
     'quicksort': SortingSampler,
     'quickselect': SortingSampler,
     'minimum': SortingSampler,
+    'parallel_find': FindSampler,
     'parallel_search': SearchSampler,
     'binary_search': SearchSampler,
     'find_maximum_subarray': MaxSubarraySampler,

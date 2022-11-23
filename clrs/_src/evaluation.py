@@ -20,7 +20,7 @@ import chex
 from clrs._src import probing
 from clrs._src import specs
 import numpy as np
-
+import logging
 
 _Array = chex.Array
 Result = Dict[str, probing.DataPoint]
@@ -154,6 +154,7 @@ def _evaluate(truth, pred, idx=None, lengths=None):
       return 0.
     truth_data = truth_data[idx][idx < lengths]
     pred_data = pred_data[idx < lengths]
+  # logging.info('------------------------SCORE', truth.type_, _EVAL_FN[truth.type_], pred_data, truth_data)
   return _EVAL_FN[truth.type_](pred_data, truth_data)
 
 

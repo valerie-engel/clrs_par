@@ -90,6 +90,7 @@ CLRS_30_ALGS = [
     'naive_string_matcher',
     'odd_even_transp_sort',
     'optimal_bst',
+    'parallel_find',
     'parallel_search',
     'quickselect',
     'quicksort',
@@ -107,7 +108,7 @@ CLRS_30_ALGS_SETTINGS = {alg: {'num_samples_multiplier': 1}
                          for alg in CLRS_30_ALGS}
 CLRS_30_ALGS_SETTINGS['find_maximum_subarray_kadane'][
     'num_samples_multiplier'] = 32
-for alg in ['quickselect', 'minimum', 'parallel_search', 'binary_search', 'naive_string_matcher',
+for alg in ['quickselect', 'minimum', 'parallel_find', 'parallel_search', 'binary_search', 'naive_string_matcher',
             'kmp_matcher', 'segments_intersect']:
   CLRS_30_ALGS_SETTINGS[alg]['num_samples_multiplier'] = 64
 
@@ -178,14 +179,23 @@ SPECS = types.MappingProxyType({
         'min_h': (Stage.HINT, Location.NODE, Type.MASK_ONE),
         'i': (Stage.HINT, Location.NODE, Type.MASK_ONE)
     },
+    'parallel_find': {
+        # MUSS HINT HABEN! -> Einfach mal eigene Pipeline?
+        'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
+        'key': (Stage.INPUT, Location.NODE, Type.SCALAR),
+        'target': (Stage.INPUT, Location.GRAPH, Type.SCALAR),
+        #'adj': (Stage.INPUT, Location.EDGE, Type.MASK),
+        # 'return': (Stage.OUTPUT, Location.GRAPH, Type.SCALAR)
+        'return': (Stage.OUTPUT, Location.NODE, Type.MASK_ONE)
+    },
     'parallel_search': {
         'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
         'key': (Stage.INPUT, Location.NODE, Type.SCALAR),
         'target': (Stage.INPUT, Location.GRAPH, Type.SCALAR),
-        'adj': (Stage.INPUT, Location.EDGE, Type.MASK),
+        # 'adj': (Stage.INPUT, Location.EDGE, Type.MASK),
         'geq_target': (Stage.HINT, Location.NODE, Type.MASK),
-        # 'return': (Stage.OUTPUT, Location.GRAPH, Type.SCALAR)
-        'return': (Stage.OUTPUT, Location.NODE, Type.MASK_ONE)
+        'return': (Stage.OUTPUT, Location.GRAPH, Type.POINTER)
+        # 'return': (Stage.OUTPUT, Location.NODE, Type.MASK_ONE)
     },
     'binary_search': {
         'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),

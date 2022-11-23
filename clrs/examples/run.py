@@ -101,7 +101,7 @@ flags.DEFINE_enum('hint_repred_mode', 'soft', ['soft', 'hard', 'hard_on_eval'],
                   'thresholding of masks. '
                   'In hard_on_eval mode, soft mode is '
                   'used for training and hard mode is used for evaluation.')
-flags.DEFINE_boolean('use_ln', True,
+flags.DEFINE_boolean('use_ln', False,
                      'Whether to use layer normalisation in the processor.')
 flags.DEFINE_boolean('use_lstm', False,
                      'Whether to insert an LSTM after message passing.')
@@ -111,7 +111,7 @@ flags.DEFINE_integer('nb_triplet_fts', 8,
 flags.DEFINE_enum('encoder_init', 'default',
                   ['default', 'xavier_on_scalars'],
                   'Initialiser to use for the encoders.')
-flags.DEFINE_enum('processor_type', 'mpnn',
+flags.DEFINE_enum('processor_type', 'gat',
                   ['deepsets', 'mpnn', 'pgn', 'pgn_mask',
                    'triplet_mpnn', 'triplet_pgn', 'triplet_pgn_mask',
                    'gat', 'gatv2', 'gat_full', 'gatv2_full',

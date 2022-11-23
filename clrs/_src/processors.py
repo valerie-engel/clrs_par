@@ -111,6 +111,7 @@ class GAT(Processor):
     assert edge_fts.shape[:-1] == (b, n, n)
     assert graph_fts.shape[:-1] == (b,)
     assert adj_mat.shape == (b, n, n)
+    #print(adj_mat)
 
     z = jnp.concatenate([node_fts, hidden], axis=-1)
     m = hk.Linear(self.out_size)
@@ -372,7 +373,7 @@ class PGN(Processor):
     assert edge_fts.shape[:-1] == (b, n, n)
     assert graph_fts.shape[:-1] == (b,)
     assert adj_mat.shape == (b, n, n)
-    #print(adj_mat)
+    # print(adj_mat)
 
     z = jnp.concatenate([node_fts, hidden], axis=-1)
     m_1 = hk.Linear(self.mid_size)
