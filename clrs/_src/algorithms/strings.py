@@ -38,6 +38,56 @@ _Out = Tuple[int, probing.ProbesDict]
 
 _ALPHABET_SIZE = 4
 
+def parallel_string_matcher(T: _Array, P: _Array) -> _Out:
+  """Parallel string matching."""
+
+  chex.assert_rank([T, P], 1)
+  probes = probing.initialize(specs.SPECS['parallel_string_matcher'])
+  
+  n = T.shape[0]
+  m = P.shape[0]
+  T_pos = np.arange(n)
+  P_pos = np.arange(m)
+  
+  # adj. mat. for full bipartite graph on T + P
+  adj_TT = np.eye(n)
+  adj_PP = np.eye(m)
+  adj_TP = np.ones([m, n])
+  adj_PT = np.ones([n, m])
+  adj_TTP = np.concatenate([adj_TT, adj_TP])
+  adj_PTP = np.concatenate([adj_PT, adj_PP])
+  adj = np.concatenate([adj_TTP, adj_PTP], axis = 1)
+  probing.push(
+      probes,
+      specs.Stage.INPUT,
+      next_probe={
+          'pos': probing.strings_pos(T_pos, P_pos),
+          'key': np.concatenate([np.copy(T), np.copy(P)]),
+          'adj': adj
+      })
+  
+  match = np.zeros(adj.shape) #SHOULD USE EYE HERE?
+  for i, t in enumerate(T):
+      for j, p in enumerate(P):
+          if t == p:
+              match[n+j, i] = 1
+              match[i, n+j] = 1
+  probing.push(
+      probes,
+      specs.Stage.HINT,
+      next_probe={'match': match})
+  
+  needle = ''.join(str(p) for p in P)
+  hay = ''.join(str(t) for t in T)
+  i = hay.find(needle)
+  # TAKE CARE OF NEEDLE NOT IN HAY? I THINK SAMPLER ONLY CREATES NEEDLES CONTAINED IN THEIR HAYS ANYWAY
+  probing.push(
+      probes,
+      specs.Stage.OUTPUT,
+      next_probe={'return': np.array(i)})
+  probing.finalize(probes)
+  return i, probes
+
 
 def naive_string_matcher(T: _Array, P: _Array) -> _Out:
   """Naive string matching."""
@@ -108,6 +158,8 @@ def naive_string_matcher(T: _Array, P: _Array) -> _Out:
       next_probe={
           'match': probing.mask_one(T.shape[0], T.shape[0] + P.shape[0])
       })
+  #WAS FINALIZE NOT NEEDED?!
+  probing.finalize(probes) 
   return T.shape[0], probes
 
 

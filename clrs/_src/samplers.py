@@ -679,6 +679,7 @@ SAMPLERS = {
     'dijkstra': BellmanFordSampler,
     'floyd_warshall': FloydWarshallSampler,
     'bipartite_matching': BipartiteSampler,
+    'parallel_string_matcher': MatcherSampler,
     'naive_string_matcher': MatcherSampler,
     'kmp_matcher': MatcherSampler,
     'segments_intersect': SegmentsSampler,

@@ -92,6 +92,7 @@ CLRS_30_ALGS = [
     'optimal_bst',
     'parallel_find',
     'parallel_search',
+    'parallel_string_matcher',
     'quickselect',
     'quicksort',
     'segments_intersect',
@@ -108,8 +109,8 @@ CLRS_30_ALGS_SETTINGS = {alg: {'num_samples_multiplier': 1}
                          for alg in CLRS_30_ALGS}
 CLRS_30_ALGS_SETTINGS['find_maximum_subarray_kadane'][
     'num_samples_multiplier'] = 32
-for alg in ['quickselect', 'minimum', 'parallel_find', 'parallel_search', 'binary_search', 'naive_string_matcher',
-            'kmp_matcher', 'segments_intersect']:
+for alg in ['quickselect', 'minimum', 'parallel_find', 'parallel_search', 'binary_search', 
+            'parallel_string_matcher', 'naive_string_matcher', 'kmp_matcher', 'segments_intersect']:
   CLRS_30_ALGS_SETTINGS[alg]['num_samples_multiplier'] = 64
 
 
@@ -193,9 +194,11 @@ SPECS = types.MappingProxyType({
         'key': (Stage.INPUT, Location.NODE, Type.SCALAR),
         'target': (Stage.INPUT, Location.GRAPH, Type.SCALAR),
         # 'adj': (Stage.INPUT, Location.EDGE, Type.MASK),
-        'geq_target': (Stage.HINT, Location.NODE, Type.MASK),
+        # 't_0': (Stage.INPUT, Location.GRAPH, Type.SCALAR),
+        'leq_target': (Stage.HINT, Location.NODE, Type.MASK),
+        # 't_i': (Stage.HINT, Location.GRAPH, Type.SCALAR),
+        # 'pred': (Stage.HINT, Location.GRAPH, Type.POINTER),
         'return': (Stage.OUTPUT, Location.GRAPH, Type.POINTER)
-        # 'return': (Stage.OUTPUT, Location.NODE, Type.MASK_ONE)
     },
     'binary_search': {
         'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
@@ -484,6 +487,13 @@ SPECS = types.MappingProxyType({
         'pi': (Stage.HINT, Location.NODE, Type.POINTER),
         'u': (Stage.HINT, Location.NODE, Type.MASK_ONE),
         'phase': (Stage.HINT, Location.GRAPH, Type.MASK)
+    },
+    'parallel_string_matcher': {
+        'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
+        'key': (Stage.INPUT, Location.NODE, Type.SCALAR), # or CATEGORICAL?
+        'adj': (Stage.INPUT, Location.EDGE, Type.MASK),
+        'match': (Stage.HINT, Location.EDGE, Type.MASK),
+        'return': (Stage.OUTPUT, Location.GRAPH, Type.POINTER)
     },
     'naive_string_matcher': {
         'string': (Stage.INPUT, Location.NODE, Type.MASK),
