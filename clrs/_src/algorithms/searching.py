@@ -128,11 +128,9 @@ def parallel_search(x: _Numeric, A: _Array) -> _Out:
   
   # create sym. adj. mat with all self edges and edges between x and all others
   # adj = np.concatenate((np.transpose([np.ones(n + 1)]) , np.concatenate(([np.ones(n)], np.eye(n,n)))), 1)
-# =============================================================================
-#   adj_path = np.eye(n) + np.diagflat(np.ones(n - 1), 1) + np.diagflat(np.ones(n - 1), -1)
-#   # path on A, connect x to each node of A
-#   adj = np.concatenate((np.transpose([np.ones(n + 1)]) , np.concatenate(([np.ones(n)], adj_path))), 1)
-# =============================================================================
+  # adj_path = np.eye(n) + np.diagflat(np.ones(n - 1), 1) + np.diagflat(np.ones(n - 1), -1)
+  # path on A, connect x to each node of A
+  # adj = np.concatenate((np.transpose([np.ones(n + 1)]) , np.concatenate(([np.ones(n)], adj_path))), 1)
   
   # DO I EVEN NEED ADJ OR DO I GET SAME RESULT WITH X AS GR.FT. AND ADJ_MAT INIT AS ALL ZEROS?
   # Well I need extra node anyway to reasonably encode new position of x as 1-hot
@@ -143,11 +141,12 @@ def parallel_search(x: _Numeric, A: _Array) -> _Out:
       probes,
       specs.Stage.INPUT,
       next_probe={
-          'pos': np.copy(T_pos),
-          # 'pos': np.copy(T_pos) * 1.0 / A.shape[0],
+          # 'pos': np.copy(T_pos),
+          'pos': np.copy(T_pos) * 1.0 / A.shape[0],
           'key': np.copy(A), #
-          'target': x,
-          # 'adj': np.copy(adj)
+          'target': x
+          # 't_0': 0,
+          # 'adj': np.copy(adj_path)
       })
   
   # B[i] = 1 <-> x <= A[i] 
@@ -155,33 +154,52 @@ def parallel_search(x: _Numeric, A: _Array) -> _Out:
   # this way, x has to compute min of all incoming values -> change to max (by using 1 - B and appending y at bottom)?
   # DO I GENERALLY RUN INTO TROUBLE BY HAVING X AS NODE BECAUSE OF ANTISYM. OF <?
   # B = np.ones_like(nodes)
-  B = np.ones_like(A)
-  i = 0
-  while i < len(A) and x > A[i]:
-      B[i] = 0
-      i = i + 1
   
+  #THIS HAS EXACTLY SAME OUTCOME AS BELOW IMPLEMENTATION
+  # IN BOTH CASES: ERROR <-> PRED =0, TRUTH = N +1 
 # =============================================================================
-#   # B[i] = 1 <-> x >= A[i] 
-#   # by convention B[len(A)] = 1, such that lowest j at which B[j] = 1 is always desired pos. of x in A
-#   B = np.zeros_like(nodes)
+#   B = np.ones_like(A)
 #   i = 0
-#   while i < len(A) and x >= A[i]:
-#      B[i] = 1
-#      i = i + 1
+#   while i < len(A) and x > A[i]:
+#       B[i] = 0
+#       i = i + 1
 # =============================================================================
+  
+  #IT SEEMS IMPORTANT THAT THE SEARCHED INDEX IS THE FIRST WITH A DIFFERENT VALUE, NOT MATTER WHETHER ITS THE FIRST ONE OR FIRST ZERO 
+    
+  # i = np.min((i,n -1)) #TO ALWAYS GET BACK I WITHIN ARRAY BOUNDS - THIS IS BAD SINCE N+1 POSSIBLE POS. FOR TARGET
+  # B[i] = 1 <-> x >= A[i] 
+# WITH X> A, EXACTLY THE VALUES <= TRAIN LENGTH ARE PREDICTED CORRECTLY
+
+  B = np.zeros_like(A)
+  i = 0
+  while i < len(A) and x >= A[i]: 
+     B[i] = 1
+     i = i + 1
           
   probing.push(
       probes,
       specs.Stage.HINT,
       next_probe={
-          'geq_target': np.copy(B)
+          'leq_target': np.copy(B)
+          # 't_i': 1
           })
+          
+# =============================================================================
+# NOT POSSIBLE BECAUSE NEED TO PROVIDE ALL HINTS AT EACH TIME STEP -- JUST FEED BOTH AT BOTH STEPS?
+#   probing.push(
+#       probes,
+#       specs.Stage.HINT,
+#       next_probe={
+#           # provide pos. again?
+#           'pred': np.array(i)
+#           })
+# =============================================================================
   
   probing.push(
       probes,
       specs.Stage.OUTPUT,
-      next_probe={'return': np.array(i)}) #probing.mask_one(i, n + 1)
+      next_probe={'return': np.array(i)}) # KLAPPT NUR OHNE PROBING.ARRAY: probing.array(np.array(i)) WAS PASSIERT HIER OHNE PROBING...? probing.mask_one(i, n)
     
   probing.finalize(probes)
   
