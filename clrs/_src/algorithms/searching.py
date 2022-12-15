@@ -125,43 +125,15 @@ def parallel_search(x: _Numeric, A: _Array) -> _Out:
   n = A.shape[0]
   nodes = np.concatenate((A, [x]))
   T_pos = np.arange(n + 1) 
-  
-  # create sym. adj. mat with all self edges and edges between x and all others
-  # adj = np.concatenate((np.transpose([np.ones(n + 1)]) , np.concatenate(([np.ones(n)], np.eye(n,n)))), 1)
-  # adj_path = np.eye(n) + np.diagflat(np.ones(n - 1), 1) + np.diagflat(np.ones(n - 1), -1)
-  # path on A, connect x to each node of A
-  # adj = np.concatenate((np.transpose([np.ones(n + 1)]) , np.concatenate(([np.ones(n)], adj_path))), 1)
-  
-
   probing.push(
       probes,
       specs.Stage.INPUT,
       next_probe={
-          # 'pos': np.copy(T_pos),
           'pos': np.copy(T_pos) * 1.0 / A.shape[0],
           'key': np.copy(nodes), #
           'target': x
-          # 't_0': 0,
-          # 'adj': np.copy(adj_path)
       })
   
-  # B[i] = 1 <-> x <= A[i] 
-  # by convention B[len(A)] = 1, such that lowest j at which B[j] = 1 is always desired pos. of x in A
-  # B = np.ones_like(nodes)
-  
-  #THIS HAS EXACTLY SAME OUTCOME AS BELOW IMPLEMENTATION
-  # IN BOTH CASES: ERROR <-> PRED =0, TRUTH = N +1 
-# =============================================================================
-#   B = np.ones_like(A)
-#   i = 0
-#   while i < len(A) and x > A[i]:
-#       B[i] = 0
-#       i = i + 1
-# =============================================================================
-   
-  # B[i] = 1 <-> x >= A[i] 
-
-# TO DO: TRY WITH X IN ARRAY AND AS GR. FT. -> ENOUGH INDICES AVAILABLE
   B = np.zeros_like(nodes)
   i = 0
   while i < len(A) and x >= A[i]: 
@@ -174,8 +146,7 @@ def parallel_search(x: _Numeric, A: _Array) -> _Out:
       next_probe={
           'leq_target': np.copy(B)
           })
-          
-  
+      
   probing.push(
       probes,
       specs.Stage.OUTPUT,

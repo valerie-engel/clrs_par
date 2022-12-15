@@ -181,7 +181,7 @@ SPECS = types.MappingProxyType({
         'i': (Stage.HINT, Location.NODE, Type.MASK_ONE)
     },
     'parallel_find': {
-        # MUSS HINT HABEN! -> Einfach mal eigene Pipeline?
+        # MUSS HINT HABEN! 
         'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
         'key': (Stage.INPUT, Location.NODE, Type.SCALAR),
         'target': (Stage.INPUT, Location.GRAPH, Type.SCALAR),
@@ -193,11 +193,7 @@ SPECS = types.MappingProxyType({
         'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
         'key': (Stage.INPUT, Location.NODE, Type.SCALAR),
         'target': (Stage.INPUT, Location.GRAPH, Type.SCALAR),
-        # 'adj': (Stage.INPUT, Location.EDGE, Type.MASK),
-        # 't_0': (Stage.INPUT, Location.GRAPH, Type.SCALAR),
         'leq_target': (Stage.HINT, Location.NODE, Type.MASK),
-        # 't_i': (Stage.HINT, Location.GRAPH, Type.SCALAR),
-        # 'pred': (Stage.HINT, Location.GRAPH, Type.POINTER),
         'return': (Stage.OUTPUT, Location.GRAPH, Type.POINTER)
     },
     'binary_search': {
