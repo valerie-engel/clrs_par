@@ -60,6 +60,47 @@ def odd_even_transp_sort(A: _Array) -> _Out:
 
   return A, probes
   
+
+def parallel_sort(A: _Array) -> _Out:
+  """Constant time parallel sort."""
+
+  chex.assert_rank(A, 1)
+  probes = probing.initialize(specs.SPECS['parallel_sort'])
+  
+  A_pos = np.arange(A.shape[0])
+  
+  probing.push(
+      probes,
+      specs.Stage.INPUT,
+      next_probe={
+          'pos': np.copy(A_pos) * 1.0 / A.shape[0],
+          'key': np.copy(A)
+      })
+  
+  less_than = np.transpose([A]) < [A]
+  
+  probing.push(
+      probes,
+      specs.Stage.HINT,
+      next_probe={
+          'less_than': np.copy(less_than * 1)
+      })
+  
+  rank = sum(less_than)
+  
+  probing.push(
+      probes,
+      specs.Stage.OUTPUT,
+      next_probe={
+          'rank': np.copy(rank)
+      })
+  
+  A = A[rank]
+  
+  probing.finalize(probes)
+
+  return A, probes
+  
   
 def insertion_sort(A: _Array) -> _Out:
   """Insertion sort."""

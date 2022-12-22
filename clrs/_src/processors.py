@@ -144,6 +144,7 @@ class GAT(Processor):
         jnp.transpose(att_e, (0, 3, 1, 2)) +  # + [B, H, N, N]
         jnp.expand_dims(att_g, axis=-1)       # + [B, H, 1, 1]
     )                                         # = [B, H, N, N]
+    #coefs = np.sum(jax.nn.leaky_relu(logits) + bias_mat, axis=-1)
     coefs = jax.nn.softmax(jax.nn.leaky_relu(logits) + bias_mat, axis=-1)
     ret = jnp.matmul(coefs, values)  # [B, H, N, F]
     ret = jnp.transpose(ret, (0, 2, 1, 3))  # [B, N, H, F]
@@ -337,7 +338,7 @@ class PGN(Processor):
       mid_size: Optional[int] = None,
       mid_act: Optional[_Fn] = None,
       activation: Optional[_Fn] = jax.nn.relu,
-      reduction: _Fn = jnp.max,
+      reduction: _Fn = jnp.sum, #jnp.max, #
       msgs_mlp_sizes: Optional[List[int]] = None,
       use_ln: bool = False,
       use_triplets: bool = False,
@@ -453,7 +454,7 @@ class MPNN(PGN):
   def __call__(self, node_fts: _Array, edge_fts: _Array, graph_fts: _Array,
                adj_mat: _Array, hidden: _Array, **unused_kwargs) -> _Array:
     # TO BE ABLE TO USE CUSTOM ADJ_MAT
-    # adj_mat = jnp.ones_like(adj_mat)
+    adj_mat = jnp.ones_like(adj_mat)
     #print(adj_mat)
     return super().__call__(node_fts, edge_fts, graph_fts, adj_mat, hidden)
 

@@ -650,6 +650,7 @@ class ConvexHullSampler(Sampler):
 
 SAMPLERS = {
     'odd_even_transp_sort': SortingSampler,
+    'parallel_sort': SortingSampler,
     'insertion_sort': SortingSampler,
     'bubble_sort': SortingSampler,
     'heapsort': SortingSampler,

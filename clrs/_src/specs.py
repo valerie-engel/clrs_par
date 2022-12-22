@@ -92,6 +92,7 @@ CLRS_30_ALGS = [
     'optimal_bst',
     'parallel_find',
     'parallel_search',
+    'parallel_sort',
     'parallel_string_matcher',
     'quickselect',
     'quicksort',
@@ -109,7 +110,7 @@ CLRS_30_ALGS_SETTINGS = {alg: {'num_samples_multiplier': 1}
                          for alg in CLRS_30_ALGS}
 CLRS_30_ALGS_SETTINGS['find_maximum_subarray_kadane'][
     'num_samples_multiplier'] = 32
-for alg in ['quickselect', 'minimum', 'parallel_find', 'parallel_search', 'binary_search', 
+for alg in ['quickselect', 'minimum', 'parallel_find', 'parallel_search', 'binary_search', 'parallel_sort',
             'parallel_string_matcher', 'naive_string_matcher', 'kmp_matcher', 'segments_intersect']:
   CLRS_30_ALGS_SETTINGS[alg]['num_samples_multiplier'] = 64
 
@@ -121,6 +122,12 @@ SPECS = types.MappingProxyType({
         'pairs':(Stage.HINT, Location.EDGE, Type.MASK), # spans allowed permutations -- mask edges to obtain matching
         'swap':(Stage.HINT, Location.EDGE, Type.MASK),  # sym. permutation matrix 
         'pred':(Stage.OUTPUT, Location.NODE, Type.POINTER)
+    },
+    'parallel_sort': {
+        'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
+        'key': (Stage.INPUT, Location.NODE, Type.SCALAR),
+        'rank': (Stage.OUTPUT, Location.NODE, Type.SHOULD_BE_PERMUTATION),
+        'less_than': (Stage.HINT, Location.EDGE, Type.MASK)
     },
     'insertion_sort': {
         'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
