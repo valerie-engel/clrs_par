@@ -34,8 +34,8 @@ import numpy as np
 import requests
 import tensorflow as tf
 
-flags.DEFINE_list('algorithms', ['parallel_sort'], 'Which algorithms to run.')
-flags.DEFINE_list('train_lengths', ['4', '7', '11', '13', '16'],
+flags.DEFINE_list('algorithms', ['odd_even_transp_sort'], 'Which algorithms to run.') 
+flags.DEFINE_list('train_lengths', ['-1'], #4', '7', '11', '13', '16
                   'Which training sizes to use. A size of -1 means '
                   'use the benchmark dataset.')
 flags.DEFINE_integer('length_needle', -8,
@@ -45,11 +45,11 @@ flags.DEFINE_integer('length_needle', -8,
                      'between 1 and the opposite of the value. '
                      'A value of 0 means use always 1/4 of the length of '
                      'the haystack (the default sampler behavior).')
-flags.DEFINE_integer('seed', 42, 'Random seed to set')
+flags.DEFINE_integer('seed', 42, 'Random seed to set') #42, 13, 34, 103, 60
 
-flags.DEFINE_boolean('random_pos', False,
+flags.DEFINE_boolean('random_pos', True,
                      'Randomize the pos input common to all algos.')
-flags.DEFINE_boolean('enforce_permutations', False,
+flags.DEFINE_boolean('enforce_permutations', True,
                      'Whether to enforce permutation-type node pointers.')
 flags.DEFINE_boolean('enforce_pred_as_input', True,
                      'Whether to change pred_h hints into pred inputs.')
@@ -93,7 +93,7 @@ flags.DEFINE_enum('hint_mode', 'encoded_decoded_nodiff',
                   'hint usage at all (`none`). The `no_diff` variants '
                   'try to predict all hint values instead of just the values '
                   'that change from one timestep to the next.')
-flags.DEFINE_enum('hint_repred_mode', 'soft', ['soft', 'hard', 'hard_on_eval'],
+flags.DEFINE_enum('hint_repred_mode', 'hard', ['soft', 'hard', 'hard_on_eval'],
                   'How to process predicted hints when fed back as inputs.'
                   'In soft mode, we use softmaxes for categoricals, pointers '
                   'and mask_one, and sigmoids for masks. '
@@ -111,7 +111,7 @@ flags.DEFINE_integer('nb_triplet_fts', 8,
 flags.DEFINE_enum('encoder_init', 'default',
                   ['default', 'xavier_on_scalars'],
                   'Initialiser to use for the encoders.')
-flags.DEFINE_enum('processor_type', 'mpnn',
+flags.DEFINE_enum('processor_type', 'deepsets',
                   ['deepsets', 'mpnn', 'pgn', 'pgn_mask',
                    'triplet_mpnn', 'triplet_pgn', 'triplet_pgn_mask',
                    'gat', 'gatv2', 'gat_full', 'gatv2_full',

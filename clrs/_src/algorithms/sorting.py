@@ -44,22 +44,144 @@ def odd_even_transp_sort(A: _Array) -> _Out:
 
   chex.assert_rank(A, 1)
   probes = probing.initialize(specs.SPECS['odd_even_transp_sort'])
+  n = len(A)
+  num_pairs = int(np.floor(A.shape[0]/2))
+  if n%2:
+      num_pairs_odd = num_pairs
+# =============================================================================
+#       adj_pairs = np.kron(np.eye(num_pairs + 1,dtype=int), np.ones((2,2)))
+#       adj_odd_pairs = np.delete(adj_pairs, 0, axis = 0)
+#       adj_odd_pairs = np.delete(adj_odd_pairs, 0, axis = 1)
+#       adj_even_pairs = np.delete(adj_pairs, -1, axis = 0)
+#       adj_even_pairs = np.delete(adj_even_pairs, -1, axis = 1)
+# =============================================================================
+  else:
+      num_pairs_odd = num_pairs - 1
+# =============================================================================
+#       adj_even_pairs = np.kron(np.eye(num_pairs,dtype=int), np.ones((2,2)))
+#       adj_odd_pairs = np.kron(np.eye(num_pairs + 2,dtype=int), np.ones((2,2)))
+#       adj_odd_pairs = np.delete(adj_odd_pairs, 0, axis = 0)
+#       adj_odd_pairs = np.delete(adj_odd_pairs, 0, axis = 1)
+#       adj_odd_pairs = np.delete(adj_odd_pairs, -1, axis = 0)
+#       adj_odd_pairs = np.delete(adj_odd_pairs, -1, axis = 1)
+# =============================================================================
+
+  # encode path graph
+  # adj_path = np.diagflat(np.ones(n)) + np.diagflat(np.ones(n-1),1) + np.diagflat(np.ones(n-1),-1) 
+  # permutation matrix for each round
+  permutation = np.eye(n)
+  A_pos = np.arange(n)
   
-  # block diagonal matrix with 2x2 all one blocks along diag. 
-  num_pairs = int(np.ceil(A.shape[0]/2))
-  pairs = np.kron(np.eye(num_pairs,dtype=int), np.ones((2,2)))
-  if A.shape[0]%2:
-      np.delete(pairs, -1, axis = 0)
-      np.delete(pairs, -1, axis = 1)
+  probing.push(
+      probes,
+      specs.Stage.INPUT,
+      next_probe={
+          'pos': np.copy(A_pos * 1.0 / A.shape[0]),
+          'key': np.copy(A),
+          # 'adj': np.copy(adj_path)
+      })
+  #circ = np.diagflat(np.ones(n-1), 1) + np.diagflat(np.ones(1), -(n-1))
   
+  r = 1
   
-  probing.push()
-  
-  
+  num_rounds = int(np.ceil(n/2))
+  for t in range(num_rounds):
+          # odd round
+          permutation = np.eye(n)
+          for i in range(num_pairs_odd):
+              i = i + 1
+              if A[2*i - 1] > A[2*i]:
+                  # permute A
+# =============================================================================
+#                   A[[2*i - 1,2*i]] = A[[2*i,2*i - 1]]
+#                   # permute A_pos
+#                   A_pos[[2*i - 1,2*i]] = A_pos[[2*i,2*i - 1]]
+# =============================================================================
+                  # permutation mat
+                  permutation[[2*i - 1,2*i]] = permutation[[2*i,2*i - 1]]
+                  # adj_path = np.matmul(np.matmul(permutation, adj_path), permutation)
+          
+          probing.push(probes, 
+                       specs.Stage.HINT,
+                       next_probe={
+                           # 'val': np.copy(A),
+                           'pred_h': probing.array(np.copy(A_pos)),
+                           'round': r,
+                           # 'adj_h': np.copy(adj_path),
+                           'permutation': np.copy(permutation)
+                           })
+          A = np.matmul(permutation, A)
+          A_pos = np.matmul(permutation, A_pos).astype(int)
+                  
+          # even round
+          permutation = np.eye(n)
+          for i in range(num_pairs):
+              if A[2*i] > A[2*i +1]:
+# =============================================================================
+#                   # permute A
+#                   A[[2*i + 1,2*i]] = A[[2*i,2*i + 1]]
+#                   # permute A_pos
+#                   A_pos[[2*i + 1,2*i]] = A_pos[[2*i,2*i + 1]]
+# =============================================================================
+                  # permutation mat
+                  permutation[[2*i + 1,2*i]] = permutation[[2*i,2*i + 1]]
+                  # adj_path = np.matmul(np.matmul(permutation, adj_path), permutation)
+                  
+          probing.push(probes, 
+                       specs.Stage.HINT,
+                       next_probe={
+                           # 'val': np.copy(A),
+                           'pred_h': probing.array(np.copy(A_pos)),
+                           'round': 1-r,
+                           # 'adj_h': np.copy(adj_path),
+                           'permutation': np.copy(permutation)
+                           })
+          A = np.matmul(permutation, A)
+          A_pos = np.matmul(permutation, A_pos).astype(int)
+# =============================================================================
+#                   x = A[2*i]
+#                   A[2*i] = A[2*i +1]
+#                   A[2*i +1] = x
+#                   x = A_pos[2*i]
+#                   A_pos[2*i] = A_pos[2*i +1]
+#                   A_pos[2*i +1] = x
+# =============================================================================
+      #pairs =
+         # if r < num_rounds -1:
+# =============================================================================
+#           probing.push(probes, 
+#                            specs.Stage.HINT,
+#                            next_probe={
+#                                # 'val': np.copy(A),
+#                                'pred_h': probing.array(np.copy(A_pos)),
+#                                'round': r,
+#                                'permutation': np.copy(permutation)
+#                                })
+# =============================================================================
+         # else:
+  probing.push(probes, 
+               specs.Stage.OUTPUT,
+               next_probe={'pred': probing.array(np.copy(A_pos))})
+              
+# ==============================================================
+#           if r < num_rounds -1:
+#               probing.push(probes, 
+#                            specs.Stage.HINT,
+#                            next_probe={
+#                                'val': np.copy(A),
+#                                'permutation': np.copy(A_pos),
+#                                #'pairs': np.copy(pairs)
+#                                })
+#           else:
+#               probing.push(probes, 
+#                            specs.Stage.OUTPUT,
+#                            next_probe={'out': np.copy(A_pos)})
+# =============================================================================
+     
   probing.finalize(probes)
 
   return A, probes
-  
+
 
 def parallel_sort(A: _Array) -> _Out:
   """Constant time parallel sort."""
@@ -77,13 +199,25 @@ def parallel_sort(A: _Array) -> _Out:
           'key': np.copy(A)
       })
   
+# =============================================================================
+#   diff = [A] - np.transpose([A]) + 0.1
+#   less_than = np.max((np.zeros_like(diff), diff),0)
+#   
+#   probing.push(
+#       probes,
+#       specs.Stage.HINT,
+#       next_probe={
+#           'less_than': np.copy(less_than * 1.0)
+#       })
+# =============================================================================
+  
   less_than = np.transpose([A]) < [A]
   
   probing.push(
       probes,
       specs.Stage.HINT,
       next_probe={
-          'less_than': np.copy(less_than * 1)
+          'less_than': np.copy(less_than)
       })
   
   rank = sum(less_than)

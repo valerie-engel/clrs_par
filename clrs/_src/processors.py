@@ -338,7 +338,7 @@ class PGN(Processor):
       mid_size: Optional[int] = None,
       mid_act: Optional[_Fn] = None,
       activation: Optional[_Fn] = jax.nn.relu,
-      reduction: _Fn = jnp.sum, #jnp.max, #
+      reduction: _Fn = jnp.max, #jnp.sum, #
       msgs_mlp_sizes: Optional[List[int]] = None,
       use_ln: bool = False,
       use_triplets: bool = False,

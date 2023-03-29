@@ -154,7 +154,7 @@ def _evaluate(truth, pred, idx=None, lengths=None):
       return 0.
     truth_data = truth_data[idx][idx < lengths]
     pred_data = pred_data[idx < lengths]
-  # logging.info('------------------------SCORE', truth.type_, _EVAL_FN[truth.type_], pred_data, truth_data)
+  #logging.info('------------------------SCORE', pred_data, truth_data)
   return _EVAL_FN[truth.type_](pred_data, truth_data)
 
 

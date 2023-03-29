@@ -117,17 +117,29 @@ for alg in ['quickselect', 'minimum', 'parallel_find', 'parallel_search', 'binar
 
 SPECS = types.MappingProxyType({
     'odd_even_transp_sort': {
-        # 'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
-        # adj on input? 
-        'pairs':(Stage.HINT, Location.EDGE, Type.MASK), # spans allowed permutations -- mask edges to obtain matching
-        'swap':(Stage.HINT, Location.EDGE, Type.MASK),  # sym. permutation matrix 
-        'pred':(Stage.OUTPUT, Location.NODE, Type.POINTER)
+        'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
+        'key': (Stage.INPUT, Location.NODE, Type.SCALAR),
+        # 'adj':(Stage.INPUT, Location.EDGE, Type.MASK),
+        # 'adj_h':(Stage.HINT, Location.EDGE, Type.MASK), # spans allowed permutations -- mask edges to obtain matching
+        #'pairs':(Stage.HINT, Location.EDGE, Type.MASK),
+# =============================================================================
+#         'val': (Stage.HINT, Location.NODE, Type.SCALAR), 
+#         'permutation':(Stage.HINT, Location.NODE, Type.SHOULD_BE_PERMUTATION), 
+#         'out':(Stage.OUTPUT, Location.NODE, Type.SHOULD_BE_PERMUTATION)
+# =============================================================================
+        # 'swap':(Stage.HINT, Location.EDGE, Type.MASK),  # sym. permutation matrix 
+        'round' : (Stage.HINT, Location.GRAPH, Type.MASK), 
+        'permutation':(Stage.HINT, Location.EDGE, Type.MASK), 
+        'pred_h': (Stage.HINT, Location.NODE, Type.POINTER),
+        'pred':(Stage.OUTPUT, Location.NODE, Type.SHOULD_BE_PERMUTATION)
+        
     },
     'parallel_sort': {
         'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
         'key': (Stage.INPUT, Location.NODE, Type.SCALAR),
         'rank': (Stage.OUTPUT, Location.NODE, Type.SHOULD_BE_PERMUTATION),
-        'less_than': (Stage.HINT, Location.EDGE, Type.MASK)
+        # 'diff': (Stage.HINT, Location.EDGE, Type.SCALAR),
+        'less_than': (Stage.HINT, Location.EDGE, Type.MASK) #SCALAR doesnt yield better results MASK
     },
     'insertion_sort': {
         'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
