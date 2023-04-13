@@ -34,7 +34,7 @@ import numpy as np
 import requests
 import tensorflow as tf
 
-flags.DEFINE_list('algorithms', ['odd_even_transp_sort'], 'Which algorithms to run.') 
+flags.DEFINE_list('algorithms', ['min_sort'], 'Which algorithms to run.') 
 flags.DEFINE_list('train_lengths', ['-1'], #4', '7', '11', '13', '16
                   'Which training sizes to use. A size of -1 means '
                   'use the benchmark dataset.')
@@ -111,7 +111,7 @@ flags.DEFINE_integer('nb_triplet_fts', 8,
 flags.DEFINE_enum('encoder_init', 'default',
                   ['default', 'xavier_on_scalars'],
                   'Initialiser to use for the encoders.')
-flags.DEFINE_enum('processor_type', 'deepsets',
+flags.DEFINE_enum('processor_type', 'pgn',
                   ['deepsets', 'mpnn', 'pgn', 'pgn_mask',
                    'triplet_mpnn', 'triplet_pgn', 'triplet_pgn_mask',
                    'gat', 'gatv2', 'gat_full', 'gatv2_full',

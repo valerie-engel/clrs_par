@@ -85,6 +85,7 @@ CLRS_30_ALGS = [
     'lcs_length',
     'matrix_chain_order',
     'minimum',
+    'min_sort',
     'mst_kruskal',
     'mst_prim',
     'naive_string_matcher',
@@ -131,7 +132,18 @@ SPECS = types.MappingProxyType({
         'round' : (Stage.HINT, Location.GRAPH, Type.MASK), 
         'permutation':(Stage.HINT, Location.EDGE, Type.MASK), 
         'pred_h': (Stage.HINT, Location.NODE, Type.POINTER),
-        'pred':(Stage.OUTPUT, Location.NODE, Type.SHOULD_BE_PERMUTATION)
+        'pred':(Stage.OUTPUT, Location.NODE, Type.POINTER) #SHOULD_BE_PERMUTATION
+        
+    },
+    'min_sort': {
+        'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
+        'key': (Stage.INPUT, Location.NODE, Type.SCALAR),
+        'candidate': (Stage.INPUT, Location.NODE, Type.MASK), 
+        'pred': (Stage.OUTPUT, Location.NODE, Type.POINTER),
+        'candidate_h': (Stage.HINT, Location.NODE, Type.MASK), 
+        'pred_h': (Stage.HINT, Location.NODE, Type.POINTER),
+        'ind_min': (Stage.HINT, Location.NODE, Type.MASK_ONE),
+        'i': (Stage.HINT, Location.GRAPH, Type.POINTER)
         
     },
     'parallel_sort': {

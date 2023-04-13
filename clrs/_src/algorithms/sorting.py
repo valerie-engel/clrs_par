@@ -182,6 +182,53 @@ def odd_even_transp_sort(A: _Array) -> _Out:
 
   return A, probes
 
+def min_sort(A: _Array) -> _Out:
+  """Constant time parallel sort."""
+
+  chex.assert_rank(A, 1)
+  probes = probing.initialize(specs.SPECS['min_sort'])
+  
+  A_pos = np.arange(A.shape[0])
+  c = np.ones_like(A)
+  
+  probing.push(
+      probes,
+      specs.Stage.INPUT,
+      next_probe={
+          'pos': np.copy(A_pos) * 1.0 / A.shape[0],
+          'key': np.copy(A),
+          'candidate': np.copy(c)
+      })
+  pred = np.zeros_like(A)
+  A_sorted = np.sort(np.copy(A))
+  for i in range(A.shape[0]):
+      # ind_min = np.argmin(A[i:]) + i
+      # A[[i, ind_min]] = A[[ind_min, i]]
+      ind_min = np.where(A == A_sorted[i])[0][0] # does not work properly for duplicate entries
+      # A_pos[[i, np.where(A_pos == ind_min)[0][0]]] = A_pos[[np.where(A_pos == ind_min)[0][0], i]]
+      c[ind_min] = 0
+      pred[ind_min] = i 
+      probing.push(
+          probes,
+          specs.Stage.HINT,
+          next_probe={
+              'pred_h': np.copy(pred), #np.copy(A_pos), #probing.array()
+              'candidate_h': np.copy(c),
+              # 'min': np.array(ind_min),
+              # should this be known the round before?:
+              'ind_min': probing.mask_one(ind_min, np.copy(A.shape[0])),
+              'i': np.array(i) #probing.mask_one(i, np.copy(A.shape[0]))
+          })
+      
+  probing.push(
+      probes,
+      specs.Stage.OUTPUT,
+      next_probe={
+          'pred': np.copy(pred), #np.copy(A_pos) #probing.array(
+      })
+  probing.finalize(probes)
+
+  return A_sorted, probes
 
 def parallel_sort(A: _Array) -> _Out:
   """Constant time parallel sort."""

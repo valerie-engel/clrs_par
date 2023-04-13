@@ -52,6 +52,7 @@ from clrs._src.algorithms.searching import binary_search
 from clrs._src.algorithms.searching import quickselect
 
 from clrs._src.algorithms.sorting import odd_even_transp_sort
+from clrs._src.algorithms.sorting import min_sort
 from clrs._src.algorithms.sorting import parallel_sort
 from clrs._src.algorithms.sorting import insertion_sort
 from clrs._src.algorithms.sorting import bubble_sort
