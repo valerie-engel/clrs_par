@@ -338,7 +338,7 @@ class PGN(Processor):
       mid_size: Optional[int] = None,
       mid_act: Optional[_Fn] = None,
       activation: Optional[_Fn] = jax.nn.relu,
-      reduction: _Fn = jnp.sum, #jnp.max, #
+      reduction: _Fn = jnp.max, #jnp.sum, #
       msgs_mlp_sizes: Optional[List[int]] = None,
       use_ln: bool = False,
       use_triplets: bool = False,
@@ -527,7 +527,7 @@ class GPGN(Processor):
     o2 = hk.Linear(self.out_size)
     gate1 = hk.Linear(self.out_size)
     gate2 = hk.Linear(self.out_size)
-    gate3 = hk.Linear(self.out_size, b_init=hk.initializers.Constant(-3))
+    gate3 = hk.Linear(self.out_size, b_init=hk.initializers.Constant(-3)) #TRY 3
 
     msg_1 = m_1(z)
     msg_2 = m_2(z)

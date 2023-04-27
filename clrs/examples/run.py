@@ -34,7 +34,7 @@ import numpy as np
 import requests
 import tensorflow as tf
 
-flags.DEFINE_list('algorithms', ['min_sort'], 'Which algorithms to run.') 
+flags.DEFINE_list('algorithms', ['blelloch'], 'Which algorithms to run.') #odd_even_transp
 flags.DEFINE_list('train_lengths', ['-1'], #4', '7', '11', '13', '16
                   'Which training sizes to use. A size of -1 means '
                   'use the benchmark dataset.')

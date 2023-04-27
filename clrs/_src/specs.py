@@ -70,6 +70,7 @@ CLRS_30_ALGS = [
     'bellman_ford',
     'bfs',
     'binary_search',
+    'blelloch',
     'bridges',
     'bubble_sort',
     'dag_shortest_paths',
@@ -129,10 +130,12 @@ SPECS = types.MappingProxyType({
 #         'out':(Stage.OUTPUT, Location.NODE, Type.SHOULD_BE_PERMUTATION)
 # =============================================================================
         # 'swap':(Stage.HINT, Location.EDGE, Type.MASK),  # sym. permutation matrix 
+        # 'odd' : (Stage.INPUT, Location.NODE, Type.MASK), 
+        # 'odd_h' : (Stage.HINT, Location.NODE, Type.MASK), 
         'round' : (Stage.HINT, Location.GRAPH, Type.MASK), 
         'permutation':(Stage.HINT, Location.EDGE, Type.MASK), 
         'pred_h': (Stage.HINT, Location.NODE, Type.POINTER),
-        'pred':(Stage.OUTPUT, Location.NODE, Type.POINTER) #SHOULD_BE_PERMUTATION
+        'pred':(Stage.OUTPUT, Location.NODE, Type.SHOULD_BE_PERMUTATION) 
         
     },
     'min_sort': {
@@ -143,7 +146,7 @@ SPECS = types.MappingProxyType({
         'candidate_h': (Stage.HINT, Location.NODE, Type.MASK), 
         'pred_h': (Stage.HINT, Location.NODE, Type.POINTER),
         'ind_min': (Stage.HINT, Location.NODE, Type.MASK_ONE),
-        'i': (Stage.HINT, Location.GRAPH, Type.POINTER)
+        'i': (Stage.HINT, Location.NODE, Type.MASK_ONE)
         
     },
     'parallel_sort': {
@@ -326,6 +329,16 @@ SPECS = types.MappingProxyType({
         'selected_h': (Stage.HINT, Location.NODE, Type.MASK),
         'i': (Stage.HINT, Location.NODE, Type.MASK_ONE),
         't': (Stage.HINT, Location.GRAPH, Type.SCALAR)
+    },
+    'blelloch': {
+        'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
+        'V': (Stage.INPUT, Location.NODE, Type.MASK),
+        'A': (Stage.INPUT, Location.EDGE, Type.SCALAR),
+        'adj': (Stage.INPUT, Location.EDGE, Type.MASK),
+        'MIS': (Stage.OUTPUT, Location.NODE, Type.MASK),
+        'MIS_h': (Stage.HINT, Location.NODE, Type.MASK),
+        'W': (Stage.HINT, Location.NODE, Type.MASK),
+        'V_h': (Stage.HINT, Location.NODE, Type.MASK)
     },
     'dfs': {
         'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),

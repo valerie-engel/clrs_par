@@ -668,6 +668,7 @@ SAMPLERS = {
     'optimal_bst': OptimalBSTSampler,
     'activity_selector': ActivitySampler,
     'task_scheduling': TaskSampler,
+    'blelloch': MSTSampler,
     'dfs': DfsSampler,
     'topological_sort': TopoSampler,
     'strongly_connected_components': SccSampler,

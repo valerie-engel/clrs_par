@@ -48,6 +48,53 @@ _Array = np.ndarray
 _Out = Tuple[_Array, probing.ProbesDict]
 _OutputClass = specs.OutputClass
 
+def blelloch(A: _Array) -> _Out:
+  """Blelloch's algorithm for a maximal independent set."""
+
+  chex.assert_rank(A, 2)
+  probes = probing.initialize(specs.SPECS['blelloch'])
+
+  A_pos = np.arange(A.shape[0])
+  V = np.ones_like(A_pos)
+  MIS = np.zeros_like(A_pos)
+
+  probing.push(
+      probes,
+      specs.Stage.INPUT,
+      next_probe={
+          'pos': np.copy(A_pos) * 1.0 / A.shape[0],
+          'A': np.copy(A),
+          'adj': probing.graph(np.copy(A)),
+          'V': np.copy(V) #, MIS = 0 ?
+      })
+  
+  
+  while np.any(V):
+      W = np.zeros_like(A_pos)
+      for i in range(A.shape[0]):
+          if not(np.any(np.matmul(A[i][:i], V[:i]))): # if i has no neighbour j in V with j < i
+              W[i] = 1
+      # herer probing push?
+        #MIS[i] = 1    # insert i in MIS
+      MIS = np.where(W * V, W, MIS) # insert W in MIS if W is still in V
+      for i in np.nonzero(W)[0]:
+          V[i] = 0
+          V = np.where(A[i], np.zeros(A.shape[0]), V) # remove i and neighbours from V
+              
+      probing.push(
+          probes,
+          specs.Stage.HINT,
+          next_probe={
+              'W': np.copy(W), # W * V?
+              'V_h': np.copy(V),
+              'MIS_h': np.copy(MIS)
+          })
+      
+  probing.push(probes, specs.Stage.OUTPUT, next_probe={'MIS': np.copy(MIS)})
+  
+  probing.finalize(probes)
+  return MIS, probes
+
 
 def dfs(A: _Array) -> _Out:
   """Depth-first search (Moore, 1959)."""
