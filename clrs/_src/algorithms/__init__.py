@@ -28,12 +28,14 @@ from clrs._src.algorithms.geometry import segments_intersect
 from clrs._src.algorithms.geometry import graham_scan
 from clrs._src.algorithms.geometry import jarvis_march
 
+from clrs._src.algorithms.graphs import maximal_independent_set
 from clrs._src.algorithms.graphs import blelloch
 from clrs._src.algorithms.graphs import dfs
 from clrs._src.algorithms.graphs import bfs
 from clrs._src.algorithms.graphs import topological_sort
 from clrs._src.algorithms.graphs import articulation_points
 from clrs._src.algorithms.graphs import bridges
+from clrs._src.algorithms.graphs import parallel_scc
 from clrs._src.algorithms.graphs import strongly_connected_components
 from clrs._src.algorithms.graphs import mst_kruskal
 from clrs._src.algorithms.graphs import mst_prim

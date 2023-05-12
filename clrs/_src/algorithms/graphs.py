@@ -48,6 +48,45 @@ _Array = np.ndarray
 _Out = Tuple[_Array, probing.ProbesDict]
 _OutputClass = specs.OutputClass
 
+def maximal_independent_set(A: _Array) -> _Out:
+  """sequential algorithm for a maximal independent set."""
+
+  chex.assert_rank(A, 2)
+  probes = probing.initialize(specs.SPECS['maximal_independent_set'])
+
+  A_pos = np.arange(A.shape[0])
+  V = np.ones_like(A_pos)
+  MIS = np.zeros_like(A_pos)
+
+  probing.push(
+      probes,
+      specs.Stage.INPUT,
+      next_probe={
+          'pos': np.copy(A_pos) * 1.0 / A.shape[0],
+          'A': np.copy(A),
+          'adj': probing.graph(np.copy(A)),
+          'V': np.copy(V) #, MIS = 0 ?
+      })
+  
+  for i in range(A.shape[0]):
+      if V[i]:
+          MIS[i] = 1
+          V = np.where(A[i], np.zeros(A.shape[0]), V)
+              
+      probing.push(
+          probes,
+          specs.Stage.HINT,
+          next_probe={
+              'V_h': np.copy(V),
+              'MIS_h': np.copy(MIS)
+          })
+      
+  probing.push(probes, specs.Stage.OUTPUT, next_probe={'MIS': np.copy(MIS)})
+  
+  probing.finalize(probes)
+  return MIS, probes
+
+
 def blelloch(A: _Array) -> _Out:
   """Blelloch's algorithm for a maximal independent set."""
 
@@ -74,7 +113,7 @@ def blelloch(A: _Array) -> _Out:
       for i in range(A.shape[0]):
           if not(np.any(np.matmul(A[i][:i], V[:i]))): # if i has no neighbour j in V with j < i
               W[i] = 1
-      # herer probing push?
+      # here probing push?
         #MIS[i] = 1    # insert i in MIS
       MIS = np.where(W * V, W, MIS) # insert W in MIS if W is still in V
       for i in np.nonzero(W)[0]:
@@ -731,6 +770,103 @@ def bridges(A: _Array) -> _Out:
 
   return is_bridge, probes
 
+def parallel_scc(A: _Array) -> _Out:
+  """parallel strongly-connected components (Fleischer et al., 2000)."""
+
+  chex.assert_rank(A, 2)
+  probes = probing.initialize(
+      specs.SPECS['parallel_scc'])
+
+  A_pos = np.arange(A.shape[0])
+
+  probing.push(
+      probes,
+      specs.Stage.INPUT,
+      next_probe={
+          'pos': np.copy(A_pos) * 1.0 / A.shape[0],
+          'A': np.copy(A),
+          'adj': probing.graph(np.copy(A))
+      })
+  
+      
+# =============================================================================
+#   def double_bfs(A,s):
+#      pred = np.zeros(A.shape[0])
+#      pred[s] = 1
+#      desc = np.copy(pred)
+#      scc = np.copy(scc)
+#      while True:
+#        prev_pred = np.copy(pred)
+#        prev_desc = np.copy(desc)
+#        probing.push(
+#            probes,
+#            specs.Stage.HINT,
+#            next_probe={
+#                'pred': np.copy(prev_pred),
+#                'desc': np.copy(prev_desc),
+#                'scc':
+#                # 'id': np.copy(pi)
+#            })
+#        scc = np.where(desc, pred, np.zeros_like(pred)) # intersection of pred and desc forms scc
+#        for i in range(A.shape[0]):
+#          for j in range(A.shape[0]):
+#            if A[i, j] > 0 and prev_desc[i] == 1:
+#              desc[j] = 1
+#            if A[j, i] > 0 and prev_pred[i] == 1:
+#              pred[j] = 1
+#        if np.all(pred == prev_pred) and np.all(desc == prev_desc):
+#          break 
+#      return scc #desc, pred
+# =============================================================================
+ 
+  # A_t = np.transpose(A)
+  scc_id = np.arange(A.shape[0])
+  unassigned = np.ones(A.shape[0]) # which nodes haven't been assigned a SCC
+  while np.any(unassigned):
+      s = np.where(unassigned)[0][0] # use smallest unassigned node as new root s
+      pred = np.zeros(A.shape[0])
+      pred[s] = 1
+      desc = np.copy(pred)
+      scc = np.copy(pred)
+      while True:
+        prev_pred = np.copy(pred)
+        prev_desc = np.copy(desc)
+        
+        scc = np.where(desc, pred, np.zeros_like(pred)) # intersection of pred and desc forms scc
+        scc_id = np.where(scc, s * np.ones_like(scc_id), scc_id) # assign s as scc_id to scc
+        unassigned = np.where(scc, np.zeros_like(scc), unassigned)
+        probing.push(
+            probes,
+            specs.Stage.HINT,
+            next_probe={
+                's': probing.mask_one(s, A.shape[0]),
+                'pred': np.copy(prev_pred),
+                'desc': np.copy(prev_desc),
+                'scc': np.copy(scc),
+                'scc_id_h': np.copy(scc_id),
+                'unassigned': np.copy(unassigned)
+            })
+        for i in range(A.shape[0]):
+          for j in range(A.shape[0]):
+            if A[i, j] > 0 and prev_desc[i] == 1:
+              desc[j] = 1
+            if A[j, i] > 0 and prev_pred[i] == 1:
+              pred[j] = 1
+        if (np.all(pred == prev_pred) and np.all(desc == prev_desc)): # or not(np.any(unassigned))
+          break 
+      #scc = double_bfs(A, s) # descendants of s #carry node label of s throughout BFS?
+      #pred = BFS(A_t,s) # predecessors of s
+      # scc = np.where(desc, pred, np.zeros_like(pred)) # intersection of pred and desc forms scc
+      # scc_id = np.where(scc, s * np.ones_like(scc_id), scc_id) # assign s as scc_id to scc
+      # unassigned = np.where(scc, np.zeros_like(scc), unassigned)
+  probing.push(
+        probes,
+        specs.Stage.OUTPUT,
+        next_probe={'scc_id': np.copy(scc_id)},
+  )
+  probing.finalize(probes)
+      
+  return scc_id, probes
 
 def strongly_connected_components(A: _Array) -> _Out:
   """Kosaraju's strongly-connected components (Aho et al., 1974)."""

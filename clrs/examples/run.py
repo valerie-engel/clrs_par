@@ -33,8 +33,10 @@ import jax.numpy as jnp
 import numpy as np
 import requests
 import tensorflow as tf
+from timeit import default_timer
+import csv
 
-flags.DEFINE_list('algorithms', ['blelloch'], 'Which algorithms to run.') #odd_even_transp
+flags.DEFINE_list('algorithms', ['parallel_search', 'parallel_sort'], 'Which algorithms to run.') #odd_even_transp #strongly_connected_components
 flags.DEFINE_list('train_lengths', ['-1'], #4', '7', '11', '13', '16
                   'Which training sizes to use. A size of -1 means '
                   'use the benchmark dataset.')
@@ -45,7 +47,7 @@ flags.DEFINE_integer('length_needle', -8,
                      'between 1 and the opposite of the value. '
                      'A value of 0 means use always 1/4 of the length of '
                      'the haystack (the default sampler behavior).')
-flags.DEFINE_integer('seed', 42, 'Random seed to set') #42, 13, 34, 103, 60
+flags.DEFINE_integer('seed', 34, 'Random seed to set') #42, 13, 34, 103, 60
 
 flags.DEFINE_boolean('random_pos', True,
                      'Randomize the pos input common to all algos.')
@@ -399,7 +401,7 @@ def main(unused_argv):
     decode_diffs = False
   else:
     raise ValueError('Hint mode not in {encoded_decoded, decoded_only, none}.')
-
+  
   train_lengths = [int(x) for x in FLAGS.train_lengths]
 
   rng_key = jax.random.PRNGKey(FLAGS.seed)
@@ -448,12 +450,20 @@ def main(unused_argv):
         )
   else:
     train_model = eval_model
-
+    
   # Training loop.
   best_score = -1.0
   current_train_items = [0] * len(FLAGS.algorithms)
   step = 0
   next_eval = 0
+  losses = np.empty((len(FLAGS.algorithms),FLAGS.train_steps))
+  val = np.empty((len(FLAGS.algorithms),int(np.floor(FLAGS.train_steps/FLAGS.eval_every))))
+  duration = np.empty((len(FLAGS.algorithms),FLAGS.train_steps))
+  v = 0
+  mypath = 'results'
+  if not os.path.isdir(mypath):
+    os.makedirs(mypath)
+  
   # Make sure scores improve on first step, but not overcome best score
   # until all algos have had at least one evaluation.
   val_scores = [-99999.9] * len(FLAGS.algorithms)
@@ -478,6 +488,7 @@ def main(unused_argv):
 
     # Training step.
     for algo_idx in range(len(train_samplers)):
+      start = default_timer()
       feedback = feedback_list[algo_idx]
       rng_key, new_rng_key = jax.random.split(rng_key)
       if FLAGS.chunked_training:
@@ -500,7 +511,8 @@ def main(unused_argv):
       logging.info('Algo %s step %i current loss %f, current_train_items %i.',
                    FLAGS.algorithms[algo_idx], step,
                    cur_loss, current_train_items[algo_idx])
-
+      losses[algo_idx, step] = cur_loss
+      duration[algo_idx, step] = default_timer() - start
     # Periodically evaluate model
     if step >= next_eval:
       for algo_idx in range(len(train_samplers)):
@@ -520,6 +532,8 @@ def main(unused_argv):
         logging.info('(val) algo %s step %d: %s',
                      FLAGS.algorithms[algo_idx], step, val_stats)
         val_scores[algo_idx] = val_stats['score']
+        val[algo_idx, v] = val_stats['score']
+      v = v + 1
 
       next_eval += FLAGS.eval_every
 
@@ -540,7 +554,7 @@ def main(unused_argv):
 
     step += 1
     length_idx = (length_idx + 1) % len(train_lengths)
-
+    
   logging.info('Restoring best model from checkpoint...')
   eval_model.restore_model('best.pkl', only_load_processor=False)
 
@@ -557,7 +571,14 @@ def main(unused_argv):
         new_rng_key,
         extras=common_extras)
     logging.info('(test) algo %s : %s', FLAGS.algorithms[algo_idx], test_stats)
-
+    filename = 'results/' + FLAGS.algorithms[algo_idx] + '_' + FLAGS.processor_type + '_' + str(FLAGS.seed) + '.csv'
+    with open(filename, 'w', newline='') as csvfile:
+      writer = csv.writer(csvfile)
+      writer.writerow(losses[algo_idx])
+      writer.writerow(val[algo_idx])
+      writer.writerow(duration[algo_idx])
+      writer.writerow([test_stats['score']])
+    
   logging.info('Done!')
 
 

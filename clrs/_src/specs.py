@@ -85,6 +85,7 @@ CLRS_30_ALGS = [
     'kmp_matcher',
     'lcs_length',
     'matrix_chain_order',
+    'maximal_independent_set',
     'minimum',
     'min_sort',
     'mst_kruskal',
@@ -93,13 +94,13 @@ CLRS_30_ALGS = [
     'odd_even_transp_sort',
     'optimal_bst',
     'parallel_find',
+    'parallel_scc',
     'parallel_search',
     'parallel_sort',
     'parallel_string_matcher',
     'quickselect',
     'quicksort',
     'segments_intersect',
-    'starhooking_scc',
     'strongly_connected_components',
     'task_scheduling',
     'topological_sort',
@@ -331,6 +332,15 @@ SPECS = types.MappingProxyType({
         'i': (Stage.HINT, Location.NODE, Type.MASK_ONE),
         't': (Stage.HINT, Location.GRAPH, Type.SCALAR)
     },
+    'maximal_independent_set': {
+        'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
+        'V': (Stage.INPUT, Location.NODE, Type.MASK),
+        'A': (Stage.INPUT, Location.EDGE, Type.SCALAR),
+        'adj': (Stage.INPUT, Location.EDGE, Type.MASK),
+        'MIS': (Stage.OUTPUT, Location.NODE, Type.MASK),
+        'MIS_h': (Stage.HINT, Location.NODE, Type.MASK),
+        'V_h': (Stage.HINT, Location.NODE, Type.MASK)
+    },
     'blelloch': {
         'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
         'V': (Stage.INPUT, Location.NODE, Type.MASK),
@@ -371,6 +381,18 @@ SPECS = types.MappingProxyType({
         'u': (Stage.HINT, Location.NODE, Type.MASK_ONE),
         'v': (Stage.HINT, Location.NODE, Type.MASK_ONE),
         's_last': (Stage.HINT, Location.NODE, Type.MASK_ONE)
+    },
+    'parallel_scc': {
+        'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
+        'A': (Stage.INPUT, Location.EDGE, Type.SCALAR),
+        'adj': (Stage.INPUT, Location.EDGE, Type.MASK),
+        'scc_id': (Stage.OUTPUT, Location.NODE, Type.POINTER),
+        's': (Stage.HINT, Location.NODE, Type.MASK_ONE),
+        'desc': (Stage.HINT, Location.NODE, Type.MASK),
+        'pred': (Stage.HINT, Location.NODE, Type.MASK),
+        'scc': (Stage.HINT, Location.NODE, Type.MASK),
+        'scc_id_h': (Stage.HINT, Location.NODE, Type.POINTER),
+        'unassigned': (Stage.HINT, Location.NODE, Type.MASK)
     },
     'strongly_connected_components': {
         'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
