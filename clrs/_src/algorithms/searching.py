@@ -125,13 +125,15 @@ def parallel_search(x: _Numeric, A: _Array) -> _Out:
   n = A.shape[0]
   nodes = np.concatenate((A, [x]))
   T_pos = np.arange(n + 1) 
+  # adj = np.eye(n+1) #TRY OUT
   probing.push(
       probes,
       specs.Stage.INPUT,
       next_probe={
           'pos': np.copy(T_pos) * 1.0 / A.shape[0],
           'key': np.copy(nodes), #
-          'target': x
+          'target': x,
+          # 'adj': np.copy(adj)
       })
   
   B = np.zeros_like(nodes)

@@ -36,8 +36,8 @@ import tensorflow as tf
 from timeit import default_timer
 import csv
 
-flags.DEFINE_list('algorithms', ['parallel_search', 'parallel_sort'], 'Which algorithms to run.') #odd_even_transp #strongly_connected_components
-flags.DEFINE_list('train_lengths', ['-1'], #4', '7', '11', '13', '16
+flags.DEFINE_list('algorithms', [['parallel_scc'], ['strongly_connected_components']], 'Which algorithms to run.') #, ['parallel_sort']'parallel_search', 'parallel_scc', 'odd_even_transp_sort' #strongly_connected_components
+flags.DEFINE_list('train_lengths', ['-1'], 
                   'Which training sizes to use. A size of -1 means '
                   'use the benchmark dataset.')
 flags.DEFINE_integer('length_needle', -8,
@@ -47,7 +47,7 @@ flags.DEFINE_integer('length_needle', -8,
                      'between 1 and the opposite of the value. '
                      'A value of 0 means use always 1/4 of the length of '
                      'the haystack (the default sampler behavior).')
-flags.DEFINE_integer('seed', 34, 'Random seed to set') #42, 13, 34, 103, 60
+flags.DEFINE_list('seed', [42, 51, 34, 103, 60], 'Random seed to set') 
 
 flags.DEFINE_boolean('random_pos', True,
                      'Randomize the pos input common to all algos.')
@@ -62,7 +62,7 @@ flags.DEFINE_integer('chunk_length', 16,
                      'Time chunk length used for training (if '
                      '`chunked_training` is True.')
 flags.DEFINE_integer('train_steps', 500, 'Number of training iterations.')
-flags.DEFINE_integer('eval_every', 100, 'Evaluation frequency (in steps).')
+flags.DEFINE_integer('eval_every', 25, 'Evaluation frequency (in steps).')
 
 flags.DEFINE_integer('hidden_size', 128,
                      'Number of hidden units of the model.')
@@ -95,7 +95,7 @@ flags.DEFINE_enum('hint_mode', 'encoded_decoded_nodiff',
                   'hint usage at all (`none`). The `no_diff` variants '
                   'try to predict all hint values instead of just the values '
                   'that change from one timestep to the next.')
-flags.DEFINE_enum('hint_repred_mode', 'hard', ['soft', 'hard', 'hard_on_eval'],
+flags.DEFINE_enum('hint_repred_mode', 'soft', ['soft', 'hard', 'hard_on_eval'],
                   'How to process predicted hints when fed back as inputs.'
                   'In soft mode, we use softmaxes for categoricals, pointers '
                   'and mask_one, and sigmoids for masks. '
@@ -110,15 +110,17 @@ flags.DEFINE_boolean('use_lstm', False,
 flags.DEFINE_integer('nb_triplet_fts', 8,
                      'How many triplet features to compute?')
 
-flags.DEFINE_enum('encoder_init', 'default',
+flags.DEFINE_enum('encoder_init', 'xavier_on_scalars',
                   ['default', 'xavier_on_scalars'],
                   'Initialiser to use for the encoders.')
-flags.DEFINE_enum('processor_type', 'gat',
-                  ['deepsets', 'mpnn', 'pgn', 'pgn_mask',
-                   'triplet_mpnn', 'triplet_pgn', 'triplet_pgn_mask',
-                   'gat', 'gatv2', 'gat_full', 'gatv2_full',
-                   'gpgn', 'gpgn_mask', 'gmpnn',
-                   'triplet_gpgn', 'triplet_gpgn_mask', 'triplet_gmpnn'],
+flags.DEFINE_list('processor_type', ['deepsets', 'gat', 'pgn', 'mpnn'],
+# =============================================================================
+#                   ['deepsets', 'mpnn', 'pgn', 'pgn_mask',
+#                    'triplet_mpnn', 'triplet_pgn', 'triplet_pgn_mask',
+#                    'gat', 'gatv2', 'gat_full', 'gatv2_full',
+#                    'gpgn', 'gpgn_mask', 'gmpnn',
+#                    'triplet_gpgn', 'triplet_gpgn_mask', 'triplet_gmpnn'],
+# =============================================================================
                   'Processor type to use as the network P.')
 
 flags.DEFINE_string('checkpoint_path', '/tmp/CLRS30',
@@ -127,7 +129,6 @@ flags.DEFINE_string('dataset_path', '/tmp/CLRS30',
                     'Path in which dataset is stored.')
 flags.DEFINE_boolean('freeze_processor', False,
                      'Whether to freeze the processor of the model.')
-
 FLAGS = flags.FLAGS
 
 
@@ -283,96 +284,96 @@ def collect_and_eval(sampler, predict_fn, sample_count, rng_key, extras):
   return {k: unpack(v) for k, v in out.items()}
 
 
-def create_samplers(rng_key, train_lengths: List[int]):
-  """Create all the samplers."""
-  train_samplers = []
-  val_samplers = []
-  val_sample_counts = []
-  test_samplers = []
-  test_sample_counts = []
-  spec_list = []
-
-  for algo_idx, algorithm in enumerate(FLAGS.algorithms):
-    # Make full dataset pipeline run on CPU (including prefetching).
-    with tf.device('/cpu:0'):
-
-      if algorithm in ['naive_string_matcher', 'kmp_matcher']:
-        # Fixed haystack + needle; variability will be in needle
-        # Still, for chunked training, we maintain as many samplers
-        # as train lengths, since, for each length there is a separate state,
-        # and we must keep the 1:1 relationship between states and samplers.
-        max_length = max(train_lengths)
-        if max_length > 0:  # if < 0, we are using the benchmark data
-          max_length = (max_length * 5) // 4
-        train_lengths = [max_length]
-        if FLAGS.chunked_training:
-          train_lengths = train_lengths * len(train_lengths)
-
-      logging.info('Creating samplers for algo %s', algorithm)
-      new_rng_key, rng_key = jax.random.split(rng_key)
-
-      p = tuple([0.1 + 0.1 * i for i in range(9)])
-      if p and algorithm in ['articulation_points', 'bridges',
-                             'mst_kruskal', 'bipartite_matching']:
-        # Choose a lower connection probability for the above algorithms,
-        # otherwise trajectories are very long
-        p = tuple(np.array(p) / 2)
-      length_needle = FLAGS.length_needle
-      sampler_kwargs = dict(p=p, length_needle=length_needle)
-      if length_needle == 0:
-        sampler_kwargs.pop('length_needle')
-
-      common_sampler_args = dict(
-          algorithm=FLAGS.algorithms[algo_idx],
-          enforce_pred_as_input=FLAGS.enforce_pred_as_input,
-          enforce_permutations=FLAGS.enforce_permutations,
-          chunk_length=FLAGS.chunk_length,
-          )
-
-      train_args = dict(sizes=train_lengths,
+def create_samplers(rng_key, train_lengths: List[int], alg):
+    """Create all the samplers."""
+    train_samplers = []
+    val_samplers = []
+    val_sample_counts = []
+    test_samplers = []
+    test_sample_counts = []
+    spec_list = []
+  
+    for algo_idx, algorithm in enumerate(alg):
+      # Make full dataset pipeline run on CPU (including prefetching).
+      with tf.device('/cpu:0'):
+      
+        if algorithm in ['naive_string_matcher', 'kmp_matcher']:
+          # Fixed haystack + needle; variability will be in needle
+          # Still, for chunked training, we maintain as many samplers
+          # as train lengths, since, for each length there is a separate state,
+          # and we must keep the 1:1 relationship between states and samplers.
+          max_length = max(train_lengths)
+          if max_length > 0:  # if < 0, we are using the benchmark data
+            max_length = (max_length * 5) // 4
+          train_lengths = [max_length]
+          if FLAGS.chunked_training:
+            train_lengths = train_lengths * len(train_lengths)
+      
+        logging.info('Creating samplers for algo %s', algorithm)
+        new_rng_key, rng_key = jax.random.split(rng_key)
+      
+        p = tuple([0.1 + 0.1 * i for i in range(9)])
+        if p and algorithm in ['articulation_points', 'bridges',
+                               'mst_kruskal', 'bipartite_matching']:
+          # Choose a lower connection probability for the above algorithms,
+          # otherwise trajectories are very long
+          p = tuple(np.array(p) / 2)
+        length_needle = FLAGS.length_needle
+        sampler_kwargs = dict(p=p, length_needle=length_needle)
+        if length_needle == 0:
+          sampler_kwargs.pop('length_needle')
+      
+        common_sampler_args = dict(
+            algorithm=algorithm, #FLAGS.algorithms[algo_idx]
+            enforce_pred_as_input=FLAGS.enforce_pred_as_input,
+            enforce_permutations=FLAGS.enforce_permutations,
+            chunk_length=FLAGS.chunk_length,
+            )
+      
+        train_args = dict(sizes=train_lengths,
+                          rng_key=new_rng_key,
+                          split='train',
+                          batch_size=FLAGS.batch_size,
+                          multiplier=-1,
+                          randomize_pos=FLAGS.random_pos,
+                          chunked=FLAGS.chunked_training,
+                          sampler_kwargs=sampler_kwargs,
+                          **common_sampler_args)
+        train_sampler, _, spec = make_multi_sampler(**train_args)
+      
+        mult = clrs.CLRS_30_ALGS_SETTINGS[algorithm]['num_samples_multiplier']
+        new_rng_key, rng_key = jax.random.split(rng_key)
+        val_args = dict(sizes=[-1],
                         rng_key=new_rng_key,
-                        split='train',
-                        batch_size=FLAGS.batch_size,
-                        multiplier=-1,
+                        split='val',
+                        batch_size=32,
+                        multiplier=mult,
                         randomize_pos=FLAGS.random_pos,
-                        chunked=FLAGS.chunked_training,
+                        chunked=False,
                         sampler_kwargs=sampler_kwargs,
                         **common_sampler_args)
-      train_sampler, _, spec = make_multi_sampler(**train_args)
+        val_sampler, val_samples, spec = make_multi_sampler(**val_args)
+      
+        new_rng_key, rng_key = jax.random.split(rng_key)
+        test_args = dict(sizes=[-1],
+                         rng_key=new_rng_key,
+                         split='test',
+                         batch_size=32,
+                         multiplier=2 * mult,
+                         randomize_pos=False,
+                         chunked=False,
+                         sampler_kwargs={},
+                         **common_sampler_args)
+        test_sampler, test_samples, spec = make_multi_sampler(**test_args)
+      
+      spec_list.append(spec)
+      train_samplers.append(train_sampler)
+      val_samplers.append(val_sampler)
+      val_sample_counts.append(val_samples)
+      test_samplers.append(test_sampler)
+      test_sample_counts.append(test_samples)
 
-      mult = clrs.CLRS_30_ALGS_SETTINGS[algorithm]['num_samples_multiplier']
-      new_rng_key, rng_key = jax.random.split(rng_key)
-      val_args = dict(sizes=[-1],
-                      rng_key=new_rng_key,
-                      split='val',
-                      batch_size=32,
-                      multiplier=mult,
-                      randomize_pos=FLAGS.random_pos,
-                      chunked=False,
-                      sampler_kwargs=sampler_kwargs,
-                      **common_sampler_args)
-      val_sampler, val_samples, spec = make_multi_sampler(**val_args)
-
-      new_rng_key, rng_key = jax.random.split(rng_key)
-      test_args = dict(sizes=[-1],
-                       rng_key=new_rng_key,
-                       split='test',
-                       batch_size=32,
-                       multiplier=2 * mult,
-                       randomize_pos=False,
-                       chunked=False,
-                       sampler_kwargs={},
-                       **common_sampler_args)
-      test_sampler, test_samples, spec = make_multi_sampler(**test_args)
-
-    spec_list.append(spec)
-    train_samplers.append(train_sampler)
-    val_samplers.append(val_sampler)
-    val_sample_counts.append(val_samples)
-    test_samplers.append(test_sampler)
-    test_sample_counts.append(test_samples)
-
-  return (train_samplers,
+    return (train_samplers,
           val_samplers, val_sample_counts,
           test_samplers, test_sample_counts,
           spec_list)
@@ -403,184 +404,193 @@ def main(unused_argv):
     raise ValueError('Hint mode not in {encoded_decoded, decoded_only, none}.')
   
   train_lengths = [int(x) for x in FLAGS.train_lengths]
-
-  rng_key = jax.random.PRNGKey(FLAGS.seed)
-
-  # Create samplers
-  new_rng_key, rng_key = jax.random.split(rng_key)
-  (train_samplers,
-   val_samplers, val_sample_counts,
-   test_samplers, test_sample_counts,
-   spec_list) = create_samplers(new_rng_key, train_lengths)
-
-  processor_factory = clrs.get_processor_factory(
-      FLAGS.processor_type,
-      use_ln=FLAGS.use_ln,
-      nb_triplet_fts=FLAGS.nb_triplet_fts,
-      nb_heads=FLAGS.nb_heads
-  )
-  model_params = dict(
-      processor_factory=processor_factory,
-      hidden_dim=FLAGS.hidden_size,
-      encode_hints=encode_hints,
-      decode_hints=decode_hints,
-      decode_diffs=decode_diffs,
-      encoder_init=FLAGS.encoder_init,
-      use_lstm=FLAGS.use_lstm,
-      learning_rate=FLAGS.learning_rate,
-      grad_clip_max_norm=FLAGS.grad_clip_max_norm,
-      checkpoint_path=FLAGS.checkpoint_path,
-      freeze_processor=FLAGS.freeze_processor,
-      dropout_prob=FLAGS.dropout_prob,
-      hint_teacher_forcing=FLAGS.hint_teacher_forcing,
-      hint_repred_mode=FLAGS.hint_repred_mode,
-      nb_msg_passing_steps=FLAGS.nb_msg_passing_steps,
-      )
-
-  eval_model = clrs.models.BaselineModel(
-      spec=spec_list,
-      dummy_trajectory=[next(t) for t in val_samplers],
-      **model_params
-  )
-  if FLAGS.chunked_training:
-    train_model = clrs.models.BaselineModelChunked(
-        spec=spec_list,
-        dummy_trajectory=[next(t) for t in train_samplers],
-        **model_params
-        )
-  else:
-    train_model = eval_model
-    
-  # Training loop.
-  best_score = -1.0
-  current_train_items = [0] * len(FLAGS.algorithms)
-  step = 0
-  next_eval = 0
-  losses = np.empty((len(FLAGS.algorithms),FLAGS.train_steps))
-  val = np.empty((len(FLAGS.algorithms),int(np.floor(FLAGS.train_steps/FLAGS.eval_every))))
-  duration = np.empty((len(FLAGS.algorithms),FLAGS.train_steps))
-  v = 0
-  mypath = 'results'
-  if not os.path.isdir(mypath):
-    os.makedirs(mypath)
-  
-  # Make sure scores improve on first step, but not overcome best score
-  # until all algos have had at least one evaluation.
-  val_scores = [-99999.9] * len(FLAGS.algorithms)
-  length_idx = 0
-
-  while step < FLAGS.train_steps:
-    feedback_list = [next(t) for t in train_samplers]
-
-    # Initialize model.
-    if step == 0:
-      all_features = [f.features for f in feedback_list]
-      if FLAGS.chunked_training:
-        # We need to initialize the model with samples of all lengths for
-        # all algorithms. Also, we need to make sure that the order of these
-        # sample sizes is the same as the order of the actual training sizes.
-        all_length_features = [all_features] + [
-            [next(t).features for t in train_samplers]
-            for _ in range(len(train_lengths))]
-        train_model.init(all_length_features[:-1], FLAGS.seed + 1)
-      else:
-        train_model.init(all_features, FLAGS.seed + 1)
-
-    # Training step.
-    for algo_idx in range(len(train_samplers)):
-      start = default_timer()
-      feedback = feedback_list[algo_idx]
-      rng_key, new_rng_key = jax.random.split(rng_key)
-      if FLAGS.chunked_training:
-        # In chunked training, we must indicate which training length we are
-        # using, so the model uses the correct state.
-        length_and_algo_idx = (length_idx, algo_idx)
-      else:
-        # In non-chunked training, all training lengths can be treated equally,
-        # since there is no state to maintain between batches.
-        length_and_algo_idx = algo_idx
-      cur_loss = train_model.feedback(rng_key, feedback, length_and_algo_idx)
-      rng_key = new_rng_key
-
-      if FLAGS.chunked_training:
-        examples_in_chunk = jnp.sum(feedback.features.is_last).item()
-      else:
-        examples_in_chunk = len(feedback.features.lengths)
-      current_train_items[algo_idx] += examples_in_chunk
-      # to compare results with the standard 32-batch_size experiments
-      logging.info('Algo %s step %i current loss %f, current_train_items %i.',
-                   FLAGS.algorithms[algo_idx], step,
-                   cur_loss, current_train_items[algo_idx])
-      losses[algo_idx, step] = cur_loss
-      duration[algo_idx, step] = default_timer() - start
-    # Periodically evaluate model
-    if step >= next_eval:
-      for algo_idx in range(len(train_samplers)):
-        common_extras = {'examples_seen': current_train_items[algo_idx],
-                         'step': step,
-                         'algorithm': FLAGS.algorithms[algo_idx]}
-        eval_model.params = train_model.params
-
-        # Validation info.
-        new_rng_key, rng_key = jax.random.split(rng_key)
-        val_stats = collect_and_eval(
-            val_samplers[algo_idx],
-            functools.partial(eval_model.predict, algorithm_index=algo_idx),
-            val_sample_counts[algo_idx],
-            new_rng_key,
-            extras=common_extras)
-        logging.info('(val) algo %s step %d: %s',
-                     FLAGS.algorithms[algo_idx], step, val_stats)
-        val_scores[algo_idx] = val_stats['score']
-        val[algo_idx, v] = val_stats['score']
-      v = v + 1
-
-      next_eval += FLAGS.eval_every
-
-      # If best total score, update best checkpoint.
-      # Also save a best checkpoint on the first step.
-      msg = (f'best avg val score was '
-             f'{best_score/len(FLAGS.algorithms):.3f}, '
-             f'current avg val score is {np.mean(val_scores):.3f}, '
-             f'val scores are: ')
-      msg += ', '.join(
-          ['%s: %.3f' % (x, y) for (x, y) in zip(FLAGS.algorithms, val_scores)])
-      if (sum(val_scores) > best_score) or step == 0:
-        best_score = sum(val_scores)
-        logging.info('Checkpointing best model, %s', msg)
-        train_model.save_model('best.pkl')
-      else:
-        logging.info('Not saving new best model, %s', msg)
-
-    step += 1
-    length_idx = (length_idx + 1) % len(train_lengths)
-    
-  logging.info('Restoring best model from checkpoint...')
-  eval_model.restore_model('best.pkl', only_load_processor=False)
-
-  for algo_idx in range(len(train_samplers)):
-    common_extras = {'examples_seen': current_train_items[algo_idx],
-                     'step': step,
-                     'algorithm': FLAGS.algorithms[algo_idx]}
-
-    new_rng_key, rng_key = jax.random.split(rng_key)
-    test_stats = collect_and_eval(
-        test_samplers[algo_idx],
-        functools.partial(eval_model.predict, algorithm_index=algo_idx),
-        test_sample_counts[algo_idx],
-        new_rng_key,
-        extras=common_extras)
-    logging.info('(test) algo %s : %s', FLAGS.algorithms[algo_idx], test_stats)
-    filename = 'results/' + FLAGS.algorithms[algo_idx] + '_' + FLAGS.processor_type + '_' + str(FLAGS.seed) + '.csv'
-    with open(filename, 'w', newline='') as csvfile:
-      writer = csv.writer(csvfile)
-      writer.writerow(losses[algo_idx])
-      writer.writerow(val[algo_idx])
-      writer.writerow(duration[algo_idx])
-      writer.writerow([test_stats['score']])
-    
-  logging.info('Done!')
+  base_path = '/tmp/CLRS30/CLRS30_v1.0.0/clrs_dataset/'
+  for alg in FLAGS.algorithms:
+      for seed in FLAGS.seed: 
+          for suff in ['_train', '_test', '_val']:
+              for algorithm in alg:
+                folder = base_path + algorithm + suff
+                if os.path.isdir(folder):
+                    logging.info('REMOVING FOLDER %s', folder)
+                    shutil.rmtree(folder)
+          for processor in FLAGS.processor_type:
+              rng_key = jax.random.PRNGKey(seed)
+            
+              # Create samplers
+              new_rng_key, rng_key = jax.random.split(rng_key)
+              (train_samplers,
+               val_samplers, val_sample_counts,
+               test_samplers, test_sample_counts,
+               spec_list) = create_samplers(new_rng_key, train_lengths, alg)
+            
+              processor_factory = clrs.get_processor_factory(
+                  processor,
+                  use_ln=FLAGS.use_ln,
+                  nb_triplet_fts=FLAGS.nb_triplet_fts,
+                  nb_heads=FLAGS.nb_heads
+              )
+              model_params = dict(
+                  processor_factory=processor_factory,
+                  hidden_dim=FLAGS.hidden_size,
+                  encode_hints=encode_hints,
+                  decode_hints=decode_hints,
+                  decode_diffs=decode_diffs,
+                  encoder_init=FLAGS.encoder_init,
+                  use_lstm=FLAGS.use_lstm,
+                  learning_rate=FLAGS.learning_rate,
+                  grad_clip_max_norm=FLAGS.grad_clip_max_norm,
+                  checkpoint_path=FLAGS.checkpoint_path,
+                  freeze_processor=FLAGS.freeze_processor,
+                  dropout_prob=FLAGS.dropout_prob,
+                  hint_teacher_forcing=FLAGS.hint_teacher_forcing,
+                  hint_repred_mode=FLAGS.hint_repred_mode,
+                  nb_msg_passing_steps=FLAGS.nb_msg_passing_steps,
+                  )
+            
+              eval_model = clrs.models.BaselineModel(
+                  spec=spec_list,
+                  dummy_trajectory=[next(t) for t in val_samplers],
+                  **model_params
+              )
+              if FLAGS.chunked_training:
+                train_model = clrs.models.BaselineModelChunked(
+                    spec=spec_list,
+                    dummy_trajectory=[next(t) for t in train_samplers],
+                    **model_params
+                    )
+              else:
+                train_model = eval_model
+                
+              # Training loop.
+              best_score = -1.0
+              current_train_items = [0] * len(alg)
+              step = 0
+              next_eval = 0
+              losses = np.empty((len(alg),FLAGS.train_steps))
+              val = np.empty((len(alg),int(np.floor(FLAGS.train_steps/FLAGS.eval_every))))
+              duration = np.empty((len(alg),FLAGS.train_steps))
+              v = 0
+              mypath = 'results'
+              if not os.path.isdir(mypath):
+                os.makedirs(mypath)
+              
+              # Make sure scores improve on first step, but not overcome best score
+              # until all algos have had at least one evaluation.
+              val_scores = [-99999.9] * len(alg)
+              length_idx = 0
+            
+              while step < FLAGS.train_steps:
+                feedback_list = [next(t) for t in train_samplers]
+            
+                # Initialize model.
+                if step == 0:
+                  all_features = [f.features for f in feedback_list]
+                  if FLAGS.chunked_training:
+                    # We need to initialize the model with samples of all lengths for
+                    # all algorithms. Also, we need to make sure that the order of these
+                    # sample sizes is the same as the order of the actual training sizes.
+                    all_length_features = [all_features] + [
+                        [next(t).features for t in train_samplers]
+                        for _ in range(len(train_lengths))]
+                    train_model.init(all_length_features[:-1], seed + 1)
+                  else:
+                    train_model.init(all_features, seed + 1)
+            
+                # Training step.
+                for algo_idx in range(len(train_samplers)):
+                  start = default_timer()
+                  feedback = feedback_list[algo_idx]
+                  rng_key, new_rng_key = jax.random.split(rng_key)
+                  if FLAGS.chunked_training:
+                    # In chunked training, we must indicate which training length we are
+                    # using, so the model uses the correct state.
+                    length_and_algo_idx = (length_idx, algo_idx)
+                  else:
+                    # In non-chunked training, all training lengths can be treated equally,
+                    # since there is no state to maintain between batches.
+                    length_and_algo_idx = algo_idx
+                  cur_loss = train_model.feedback(rng_key, feedback, length_and_algo_idx)
+                  rng_key = new_rng_key
+            
+                  if FLAGS.chunked_training:
+                    examples_in_chunk = jnp.sum(feedback.features.is_last).item()
+                  else:
+                    examples_in_chunk = len(feedback.features.lengths)
+                  current_train_items[algo_idx] += examples_in_chunk
+                  # to compare results with the standard 32-batch_size experiments
+                  logging.info('Algo %s step %i current loss %f, current_train_items %i.',
+                               alg[algo_idx], step,
+                               cur_loss, current_train_items[algo_idx])
+                  losses[algo_idx, step] = cur_loss
+                  duration[algo_idx, step] = default_timer() - start
+                # Periodically evaluate model
+                if step >= next_eval:
+                  for algo_idx in range(len(train_samplers)):
+                    common_extras = {'examples_seen': current_train_items[algo_idx],
+                                     'step': step,
+                                     'algorithm': alg[algo_idx]}
+                    eval_model.params = train_model.params
+            
+                    # Validation info.
+                    new_rng_key, rng_key = jax.random.split(rng_key)
+                    val_stats = collect_and_eval(
+                        val_samplers[algo_idx],
+                        functools.partial(eval_model.predict, algorithm_index=algo_idx),
+                        val_sample_counts[algo_idx],
+                        new_rng_key,
+                        extras=common_extras)
+                    logging.info('(val) algo %s step %d: %s',
+                                 alg[algo_idx], step, val_stats)
+                    val_scores[algo_idx] = val_stats['score']
+                    val[algo_idx, v] = val_stats['score']
+                  v = v + 1
+            
+                  next_eval += FLAGS.eval_every
+            
+                  # If best total score, update best checkpoint.
+                  # Also save a best checkpoint on the first step.
+                  msg = (f'best avg val score was '
+                         f'{best_score/len(alg):.3f}, '
+                         f'current avg val score is {np.mean(val_scores):.3f}, '
+                         f'val scores are: ')
+                  msg += ', '.join(
+                      ['%s: %.3f' % (x, y) for (x, y) in zip(alg, val_scores)])
+                  if (sum(val_scores) > best_score) or step == 0:
+                    best_score = sum(val_scores)
+                    logging.info('Checkpointing best model, %s', msg)
+                    train_model.save_model('best.pkl')
+                  else:
+                    logging.info('Not saving new best model, %s', msg)
+            
+                step += 1
+                length_idx = (length_idx + 1) % len(train_lengths)
+                
+              logging.info('Restoring best model from checkpoint...')
+              eval_model.restore_model('best.pkl', only_load_processor=False)
+            
+              for algo_idx in range(len(train_samplers)):
+                common_extras = {'examples_seen': current_train_items[algo_idx],
+                                 'step': step,
+                                 'algorithm': alg[algo_idx]}
+            
+                new_rng_key, rng_key = jax.random.split(rng_key)
+                test_stats = collect_and_eval(
+                    test_samplers[algo_idx],
+                    functools.partial(eval_model.predict, algorithm_index=algo_idx),
+                    test_sample_counts[algo_idx],
+                    new_rng_key,
+                    extras=common_extras)
+                logging.info('(test) algo %s : %s', alg[algo_idx], test_stats)
+                filename = 'results/' + alg[algo_idx] + '_' + processor + '_' + str(seed) + '.csv'
+                with open(filename, 'w', newline='') as csvfile:
+                  writer = csv.writer(csvfile)
+                  writer.writerow(losses[algo_idx])
+                  writer.writerow(val[algo_idx])
+                  writer.writerow(duration[algo_idx])
+                  writer.writerow([test_stats['score']])
+                
+              logging.info('Done!')
 
 
 if __name__ == '__main__':
-  app.run(main)
+ app.run(main)

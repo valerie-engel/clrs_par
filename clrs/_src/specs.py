@@ -229,6 +229,7 @@ SPECS = types.MappingProxyType({
         'pos': (Stage.INPUT, Location.NODE, Type.SCALAR),
         'key': (Stage.INPUT, Location.NODE, Type.SCALAR),
         'target': (Stage.INPUT, Location.GRAPH, Type.SCALAR),
+        # 'adj': (Stage.INPUT, Location.EDGE, Type.MASK),
         'leq_target': (Stage.HINT, Location.NODE, Type.MASK),
         'return': (Stage.OUTPUT, Location.GRAPH, Type.POINTER)
     },
